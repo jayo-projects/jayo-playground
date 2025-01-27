@@ -1,0 +1,35 @@
+[versions]
+# plugins
+# https://github.com/JetBrains/kotlin/releases
+kotlin = "2.1.0"
+# https://github.com/melix/jmh-gradle-plugin/releases (for benchmarks)
+jmhPlugin = "0.7.2"
+# https://github.com/GradleUp/shadow/releases (for benchmarks)
+shadow = "8.3.5"
+
+# main
+# https://github.com/jspecify/jspecify/releases
+jspecify = "1.0.0"
+
+# test
+# https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
+junit = "5.11.4"
+# https://mvnrepository.com/artifact/org.assertj/assertj-core
+assertj = "3.27.2"
+
+# benchmarks
+# https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
+jmh = "1.37"
+
+[libraries]
+# main
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+
+# test
+junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+jmh = { id = "me.champeau.jmh", version.ref = "jmhPlugin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
