@@ -1,14 +1,9 @@
 package jayo.playground.benchmarks
 
-import jayo.playground.scheduling.TaskQueue
 import jayo.playground.scheduling.Scheduler
+import jayo.playground.scheduling.TaskQueue
 import org.openjdk.jmh.annotations.*
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.*
 
 @State(Scope.Thread)
 @OutputTimeUnit(TimeUnit.SECONDS)
@@ -17,9 +12,10 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = 5, time = 1) // in seconds
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
-open class TaskRunnerBenchmark {
+open class SchedulerBenchmark {
     @Param("1", "2")
     private var schedulerVersion = 0
+
     @Param("virtual", "pooled")
     private lateinit var executorType: String
 
@@ -52,7 +48,7 @@ open class TaskRunnerBenchmark {
 
     @Setup(Level.Invocation)
     fun setup() {
-        executor = when(executorType) {
+        executor = when (executorType) {
             "virtual" -> Executors.newVirtualThreadPerTaskExecutor()
             "pooled" -> {
                 ThreadPoolExecutor(
@@ -67,6 +63,7 @@ open class TaskRunnerBenchmark {
                     Thread.ofVirtual().factory(),
                 ).apply { prestartAllCoreThreads() }
             }
+
             else -> throw IllegalStateException("Unknown executor type: $executorType")
         }
         executor = Executors.newVirtualThreadPerTaskExecutor()

@@ -208,10 +208,10 @@ public final class Scheduler2 implements Scheduler {
                     coordinatorWaiting = false;
                 }
                 // wait was fully done, return this scheduled task now ready to go.
-//                if (fullyWaited && task == futureTasks.peek()) {
-//                    beforeRun(task);
-//                    return task;
-//                }
+                if (fullyWaited && task == futureTasks.peek()) {
+                    beforeRun(task);
+                    return task;
+                }
             }
         }
     }
