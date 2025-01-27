@@ -27,4 +27,4 @@ git clone git@github.com:jayo-projects/jayo-http.git
 
 [Apache-2.0](https://opensource.org/license/apache-2-0)
 
-Copyright (c) 2024-present, pull-vert and Jayo contributors
+Copyright (c) 2025-present, pull-vert and Jayo contributors
