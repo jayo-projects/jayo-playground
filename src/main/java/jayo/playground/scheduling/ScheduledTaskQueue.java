@@ -23,7 +23,7 @@ package jayo.playground.scheduling;
 
 import org.jspecify.annotations.NonNull;
 
-import java.util.concurrent.CountDownLatch;
+import java.util.function.LongSupplier;
 
 /**
  * A set of tasks that are executed in sequential order.
@@ -32,27 +32,11 @@ import java.util.concurrent.CountDownLatch;
  *
  * @implNote In practice a set of queues may share a set of threads to save resources.
  */
-public interface TaskQueue {
+public interface ScheduledTaskQueue extends TaskQueue {
     /**
-     * @return the name of this task queue.
+     * Schedule a delayed or/and repeating task that will be run on a task runner thread. This task is cancellable.
      */
-    @NonNull
-    String getName();
-
-    /**
-     * Execute a task once on a task runner thread.
-     */
-    void execute(final @NonNull String name, final boolean cancellable, final Runnable block);
-
-    /**
-     * @return a latch that reaches 0 when the queue is next idle.
-     */
-    @NonNull
-    CountDownLatch idleLatch();
-
-    /**
-     * First initiates an orderly shutdown, no new tasks will be accepted. Then schedules immediate cancellation on all
-     * currently-enqueued tasks by calling cancelAll().
-     */
-    void shutdown();
+    void schedule(final @NonNull String name,
+                  final long initialDelayNanos,
+                  final @NonNull LongSupplier block);
 }

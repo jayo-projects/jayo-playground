@@ -21,7 +21,7 @@
 
 package jayo.playground.scheduling.impl1;
 
-import jayo.playground.scheduling.TaskQueue;
+import jayo.playground.scheduling.ScheduledTaskQueue;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -31,8 +31,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.LongSupplier;
 
-final class TaskQueue1 implements TaskQueue {
-    final @NonNull Scheduler1 taskRunner;
+final class TaskQueue1 implements ScheduledTaskQueue {
+    final @NonNull TaskRunner1 taskRunner;
     final @NonNull String name;
 
     boolean shutdown = false;
@@ -54,7 +54,7 @@ final class TaskQueue1 implements TaskQueue {
      */
     boolean cancelActiveTask = false;
 
-    TaskQueue1(final @NonNull Scheduler1 taskRunner, final @NonNull String name) {
+    TaskQueue1(final @NonNull TaskRunner1 taskRunner, final @NonNull String name) {
         assert taskRunner != null;
         assert name != null;
 
@@ -117,7 +117,7 @@ final class TaskQueue1 implements TaskQueue {
                 if (task.cancellable) {
                     return;
                 }
-                throw new RejectedExecutionException();
+                throw new RejectedExecutionException("Queue is shutdown");
             }
 
             if (scheduleAndDecide(task, delayNanos)) {
@@ -198,7 +198,7 @@ final class TaskQueue1 implements TaskQueue {
     }
 
     @Override
-    public void shutdownNow() {
+    public void shutdown() {
         taskRunner.lock.lock();
         try {
             shutdown = true;

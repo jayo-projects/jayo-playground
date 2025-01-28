@@ -19,21 +19,23 @@
  * limitations under the License.
  */
 
-package jayo.playground.scheduling.impl2;
+package jayo.playground.scheduling.impl1;
 
-import jayo.playground.scheduling.Scheduler;
+import jayo.playground.scheduling.ScheduledTaskQueue;
 import jayo.playground.scheduling.TaskQueue;
+import jayo.playground.scheduling.TaskRunner;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.PriorityQueue;
-import java.util.Queue;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-public final class Scheduler2 implements Scheduler {
+public final class TaskRunner1 implements TaskRunner {
     private final @NonNull ExecutorService executor;
     private final @NonNull Runnable runnable;
 
@@ -48,16 +50,21 @@ public final class Scheduler2 implements Scheduler {
     private int runCallCount = 0;
 
     /**
-     * Scheduled tasks ordered by {@link Task2#nextExecuteNanoTime}.
+     * Queues with tasks that are currently executing their {@link TaskQueue1#activeTask}.
      */
-    final Queue<Task2> futureTasks = new PriorityQueue<>();
+    private final List<TaskQueue1> busyQueues = new ArrayList<>();
 
-    public Scheduler2(final @NonNull ExecutorService executor) {
+    /**
+     * Queues not in {@link #busyQueues} that have non-empty {@link TaskQueue1#futureTasks}.
+     */
+    private final List<TaskQueue1> readyQueues = new ArrayList<>();
+
+    public TaskRunner1(final @NonNull ExecutorService executor) {
         assert executor != null;
 
         this.executor = executor;
         runnable = () -> {
-            Task2 task;
+            Task1 task;
             lock.lock();
             try {
                 runCallCount++;
@@ -103,7 +110,17 @@ public final class Scheduler2 implements Scheduler {
         };
     }
 
-    void kickCoordinator() {
+    void kickCoordinator(final @NonNull TaskQueue1 taskQueue) {
+        assert taskQueue != null;
+
+        if (taskQueue.activeTask == null) {
+            if (!taskQueue.futureTasks.isEmpty()) {
+                addIfAbsent(readyQueues, taskQueue);
+            } else {
+                readyQueues.remove(taskQueue);
+            }
+        }
+
         if (coordinatorWaiting) {
             coordinatorNotify();
         } else {
@@ -111,27 +128,19 @@ public final class Scheduler2 implements Scheduler {
         }
     }
 
-    private void beforeRun(final @NonNull Task2 task) {
+    private void beforeRun(final @NonNull Task1 task) {
         assert task != null;
 
         task.nextExecuteNanoTime = -1L;
         final var queue = task.queue;
         assert queue != null;
-        if (queue.futureTasks.remove() != task || queue.scheduledTask != task) {
-            throw new IllegalStateException();
-        }
+        queue.futureTasks.remove(task);
+        readyQueues.remove(queue);
         queue.activeTask = task;
-        if (futureTasks.remove() != task) {
-            throw new IllegalStateException();
-        }
-
-        // Also start another thread if there's more work or scheduling to do.
-        if (!futureTasks.isEmpty()) {
-            startAnotherThread();
-        }
+        busyQueues.add(queue);
     }
 
-    private void afterRun(final @NonNull Task2 task,
+    private void afterRun(final @NonNull Task1 task,
                           final long delayNanos,
                           final boolean completedNormally) {
         assert task != null;
@@ -142,75 +151,94 @@ public final class Scheduler2 implements Scheduler {
             throw new IllegalStateException("Task queue " + queue.name + " is not active");
         }
 
-        final var cancelTask = queue.cancelActiveTask;
+        final var cancelActiveTask = queue.cancelActiveTask;
         queue.cancelActiveTask = false;
         queue.activeTask = null;
+        busyQueues.remove(queue);
 
-        if (queue.scheduledTask != task) {
-            throw new IllegalStateException();
-        }
-        final var nextTaskInQueue = queue.futureTasks.peek();
-        if (nextTaskInQueue != null) {
-            futureTasks.add(nextTaskInQueue);
-            queue.scheduledTask = nextTaskInQueue;
-        } else {
-            queue.scheduledTask = null;
-        }
-
-        if (delayNanos != -1L && !cancelTask && !queue.shutdown) {
+        if (delayNanos != -1L && !cancelActiveTask && !queue.shutdown) {
             queue.scheduleAndDecide(task, delayNanos);
         }
 
-        // If the task crashed, start another thread to run the next task.
-        if (!futureTasks.isEmpty() && !completedNormally) {
-            startAnotherThread();
+        if (!queue.futureTasks.isEmpty()) {
+            readyQueues.add(queue);
+
+            // If the task crashed, start another thread to run the next task.
+            if (!completedNormally) {
+                startAnotherThread();
+            }
         }
     }
 
     /**
-     * Returns an immediately-executable task for the calling thread to execute, sleeping as necessary until one is
-     * ready. If there are no ready task, or if other threads can execute it this will return null. If there is more
-     * than a single task ready to execute immediately this will start another thread to handle that work.
+     * Returns an immediately-executable task for the calling thread to execute, sleeping as necessary
+     * until one is ready. If there are no ready queues, or if other threads have everything under
+     * control this will return null. If there is more than a single task ready to execute immediately
+     * this will start another thread to handle that work.
      */
-    private @Nullable Task2 awaitTaskToRun() {
+    private @Nullable Task1 awaitTaskToRun() {
         while (true) {
-            final var task = futureTasks.peek();
-            if (task == null) {
+            if (readyQueues.isEmpty()) {
                 return null; // Nothing to do.
             }
 
             final var now = nanoTime();
-            final var taskDelayNanos = task.nextExecuteNanoTime - now;
+            var minDelayNanos = Long.MAX_VALUE;
+            Task1 readyTask = null;
+            var multipleReadyTasks = false;
 
-            // We have a task ready to go. Run it.
-            if (taskDelayNanos <= 0L) {
-                beforeRun(task);
-                return task;
+            // 1) Decide what to run. This loop's goal wants to:
+            //  * Find out what this thread should do (either run a task or sleep)
+            //  * Find out if there's enough work to start another thread.
+            for (final var queue : readyQueues) {
+                final var candidate = queue.futureTasks.first();
+                final var candidateDelay = Math.max(0L, candidate.nextExecuteNanoTime - now);
+
+                // Compute the delay of the soonest-executable task.
+                if (candidateDelay > 0L) {
+                    minDelayNanos = Math.min(candidateDelay, minDelayNanos);
+
+                    // If we already have more than one task, that's enough work for now. Stop searching.
+                } else if (readyTask != null) {
+                    multipleReadyTasks = true;
+                    break;
+
+                    // We have a task to execute when we complete the loop.
+                } else {
+                    readyTask = candidate;
+                }
+            }
+
+            // Implement the decision.
+            // We have a task ready to go. Get ready.
+            if (readyTask != null) {
+                beforeRun(readyTask);
+
+                // Also start another thread if there's more work or scheduling to do.
+                if (multipleReadyTasks || (!coordinatorWaiting && !readyQueues.isEmpty())) {
+                    startAnotherThread();
+                }
+
+                return readyTask;
 
                 // Notify the coordinator of a task that's coming up soon.
             } else if (coordinatorWaiting) {
-                if (taskDelayNanos < coordinatorWakeUpAt - now) {
+                if (minDelayNanos < coordinatorWakeUpAt - now) {
                     coordinatorNotify();
                 }
                 return null;
 
-                // No other thread is coordinating. Become the coordinator and wait for this scheduled task!
+                // No other thread is coordinating. Become the coordinator!
             } else {
                 coordinatorWaiting = true;
-                coordinatorWakeUpAt = now + taskDelayNanos;
-                var fullyWaited = false;
+                coordinatorWakeUpAt = now + minDelayNanos;
                 try {
-                    fullyWaited = coordinatorWait(taskDelayNanos);
+                    coordinatorWait(minDelayNanos);
                 } catch (InterruptedException ignored) {
                     // Will cause all tasks to exit unless more are scheduled!
                     cancelAll();
                 } finally {
                     coordinatorWaiting = false;
-                }
-                // wait was fully done, return this scheduled task now ready to go.
-                if (fullyWaited && task == futureTasks.peek()) {
-                    beforeRun(task);
-                    return task;
                 }
             }
         }
@@ -229,15 +257,16 @@ public final class Scheduler2 implements Scheduler {
 
     @Override
     public @NonNull TaskQueue newQueue() {
-        return new TaskQueue2(this, "Q" + nextQueueName.getAndIncrement(), new PriorityQueue<>());
+        return newScheduledQueue();
     }
 
     @Override
-    public void execute(final boolean cancellable, final Runnable block) {
-        assert block != null;
+    public @NonNull ScheduledTaskQueue newScheduledQueue() {
+        return new TaskQueue1(this, "Q" + nextQueueName.getAndIncrement());
+    }
 
-        // todo build the task and call
-        //new TaskQueue3(this, "Q" + nextQueueName.getAndIncrement(), Collections.singleton(task));
+    @Override
+    public void execute(boolean cancellable, Runnable block) {
         final var queue = newQueue();
         queue.execute(queue.getName() + "-task", cancellable, block);
         try {
@@ -245,7 +274,7 @@ public final class Scheduler2 implements Scheduler {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
-            queue.shutdownNow();
+            queue.shutdown();
         }
     }
 
@@ -263,28 +292,35 @@ public final class Scheduler2 implements Scheduler {
     }
 
     /**
-     * Wait a duration in nanoseconds.
-     *
-     * @return true if wait was fully completed, false if it has been signalled before ending the wait phase.
+     * Wait a duration in nanoseconds. Unlike {@link Object#wait(long)} this interprets 0 as "don't wait" instead of
+     * "wait forever".
      */
-    public boolean coordinatorWait(final long nanos) throws InterruptedException {
-        assert nanos > 0;
-        return condition.awaitNanos(nanos) <= 0;
+    public void coordinatorWait(long nanos) throws InterruptedException {
+        if (nanos > 0) {
+            condition.awaitNanos(nanos);
+        }
     }
 
-    public void execute(final @NonNull Runnable runnable) {
+    public void execute(@NonNull Runnable runnable) {
         executor.execute(runnable);
     }
 
     private void cancelAll() {
-        final var tasksIterator = futureTasks.iterator();
-        while (tasksIterator.hasNext()) {
-            final var task = tasksIterator.next();
-            if (task.cancellable) {
-                tasksIterator.remove();
-                assert task.queue != null;
-                task.queue.futureTasks.remove(task);
+        for (var i = busyQueues.size() - 1; i >= 0; i--) {
+            busyQueues.get(i).cancelAllAndDecide();
+        }
+        for (var i = readyQueues.size() - 1; i >= 0; i--) {
+            final var queue = readyQueues.get(i);
+            queue.cancelAllAndDecide();
+            if (queue.futureTasks.isEmpty()) {
+                readyQueues.remove(i);
             }
+        }
+    }
+
+    static <T> void addIfAbsent(final Collection<T> collection, final T element) {
+        if (!collection.contains(element)) {
+            collection.add(element);
         }
     }
 }

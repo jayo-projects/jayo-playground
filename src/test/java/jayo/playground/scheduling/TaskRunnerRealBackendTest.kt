@@ -39,7 +39,7 @@ import java.util.stream.Stream
  * This test is doing real sleeping with tolerances of 250 ms. Hopefully that's enough for even the busiest of CI
  * servers.
  */
-class SchedulerRealBackendTest {
+class TaskRunnerRealBackendTest {
     companion object {
         @JvmStatic
         private val log = LinkedBlockingDeque<String>()
@@ -58,15 +58,15 @@ class SchedulerRealBackendTest {
         @JvmStatic
         private fun parameters() =
             Stream.of<Arguments>(
-                Arguments.of(Scheduler.create1(Executors.newThreadPerTaskExecutor(threadFactory))),
-                Arguments.of(Scheduler.create2(Executors.newThreadPerTaskExecutor(threadFactory))),
+                Arguments.of(TaskRunner.create1(Executors.newThreadPerTaskExecutor(threadFactory))),
+                Arguments.of(TaskRunner.create2(Executors.newThreadPerTaskExecutor(threadFactory))),
             )
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
-    fun testQueueSchedule(scheduler: Scheduler) {
-        val queue = scheduler.newQueue()
+    fun testQueueSchedule(taskRunner: TaskRunner) {
+        val queue = taskRunner.newScheduledQueue()
         val t1 = System.nanoTime() / 1e6
 
         val delays = mutableListOf(TimeUnit.MILLISECONDS.toNanos(1000), -1L)
@@ -86,8 +86,8 @@ class SchedulerRealBackendTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    fun testQueueExecute(scheduler: Scheduler) {
-        val queue = scheduler.newQueue()
+    fun testQueueExecute(taskRunner: TaskRunner) {
+        val queue = taskRunner.newQueue()
         val t1 = System.nanoTime() / 1e6
 
         queue.execute("task", true) {
@@ -101,10 +101,10 @@ class SchedulerRealBackendTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    fun testSingleExecute(scheduler: Scheduler) {
+    fun testSingleExecute(taskRunner: TaskRunner) {
         val t1 = System.nanoTime() / 1e6
 
-        scheduler.execute(true) {
+        taskRunner.execute(true) {
             log.put("runOnce")
         }
 
@@ -115,8 +115,8 @@ class SchedulerRealBackendTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    fun taskFailsWithUncheckedException(scheduler: Scheduler) {
-        val queue = scheduler.newQueue()
+    fun taskFailsWithUncheckedException(taskRunner: TaskRunner) {
+        val queue = taskRunner.newScheduledQueue()
         queue.schedule("task", TimeUnit.MILLISECONDS.toNanos(100)) {
             log.put("failing task running")
             throw RuntimeException("boom!")
@@ -137,12 +137,11 @@ class SchedulerRealBackendTest {
 
     @ParameterizedTest
     @MethodSource("parameters")
-    fun idleLatchAfterShutdown(scheduler: Scheduler) {
-        val queue = scheduler.newQueue()
-        queue.schedule("task", 0L) {
+    fun idleLatchAfterShutdown(taskRunner: TaskRunner) {
+        val queue = taskRunner.newQueue()
+        queue.execute("task", true) {
             Thread.sleep(250)
-            scheduler.shutdown()
-            return@schedule -1L
+            taskRunner.shutdown()
         }
 
         assertThat(queue.idleLatch().count).isEqualTo(1)
