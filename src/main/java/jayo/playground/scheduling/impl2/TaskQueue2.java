@@ -126,6 +126,7 @@ final class TaskQueue2 implements ScheduledTaskQueue {
                 if (task.cancellable) {
                     return;
                 }
+                System.out.println("Task " + task + " is refused");
                 throw new RejectedExecutionException();
             }
 
@@ -203,7 +204,7 @@ final class TaskQueue2 implements ScheduledTaskQueue {
         futureTasks.add(task);
 
         if (scheduledTask != null) {
-            // a task was already in the scheduler, take the earlier of the two times.
+            // a task was already in the task runner, take the earlier of the two times.
             if (scheduledTask.nextExecuteNanoTime <= executeNanoTime) {
                 return false;
             }

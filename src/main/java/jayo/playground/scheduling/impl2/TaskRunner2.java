@@ -22,8 +22,8 @@
 package jayo.playground.scheduling.impl2;
 
 import jayo.playground.scheduling.ScheduledTaskQueue;
-import jayo.playground.scheduling.TaskRunner;
 import jayo.playground.scheduling.TaskQueue;
+import jayo.playground.scheduling.TaskRunner;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -31,6 +31,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -41,7 +42,8 @@ public final class TaskRunner2 implements TaskRunner {
     final ReentrantLock lock = new ReentrantLock();
     final Condition condition = lock.newCondition();
 
-    private final AtomicInteger nextQueueName = new AtomicInteger(10000);
+    private final AtomicLong nextTaskIndex = new AtomicLong(10000);
+    private final AtomicInteger nextQueueIndex = new AtomicInteger(10000);
     private boolean coordinatorWaiting = false;
     private long coordinatorWakeUpAt = 0L;
 
@@ -117,11 +119,15 @@ public final class TaskRunner2 implements TaskRunner {
 
         task.nextExecuteNanoTime = -1L;
         final var queue = task.queue;
-        assert queue != null;
-        if (queue.futureTasks.remove() != task || queue.scheduledTask != task) {
-            throw new IllegalStateException();
+        if (queue != null) {
+            final var removedTask = queue.futureTasks.remove();
+            if (removedTask != task || queue.scheduledTask != task) {
+                throw new IllegalStateException("removedTask " + removedTask + " or queue.scheduledTask " +
+                        queue.scheduledTask + " != task " + task);
+            }
+            queue.activeTask = task;
         }
-        queue.activeTask = task;
+
         if (futureTasks.remove() != task) {
             throw new IllegalStateException();
         }
@@ -138,18 +144,30 @@ public final class TaskRunner2 implements TaskRunner {
         assert task != null;
 
         final var queue = task.queue;
-        assert queue != null;
+        if (queue != null) {
+            afterRun(task, delayNanos, queue);
+        }
+
+        // If the task crashed, start another thread to run the next task.
+        if (!futureTasks.isEmpty() && !completedNormally) {
+            startAnotherThread();
+        }
+    }
+
+    private void afterRun(final @NonNull Task2 task,
+                          final long delayNanos,
+                          final @NonNull TaskQueue2 queue) {
         if (queue.activeTask != task) {
-            throw new IllegalStateException("Task queue " + queue.name + " is not active");
+            throw new IllegalStateException("Task queue " + queue.name + " is not active." +
+                    " queue.activeTask " + queue.activeTask + " != task " + task);
         }
 
         final var cancelTask = queue.cancelActiveTask;
         queue.cancelActiveTask = false;
         queue.activeTask = null;
 
-        if (queue.scheduledTask != task) {
-            throw new IllegalStateException();
-        }
+        assert queue.scheduledTask == task;
+
         final var nextTaskInQueue = queue.futureTasks.peek();
         if (nextTaskInQueue != null) {
             futureTasks.add(nextTaskInQueue);
@@ -160,11 +178,6 @@ public final class TaskRunner2 implements TaskRunner {
 
         if (delayNanos != -1L && !cancelTask && !queue.shutdown) {
             queue.scheduleAndDecide(task, delayNanos);
-        }
-
-        // If the task crashed, start another thread to run the next task.
-        if (!futureTasks.isEmpty() && !completedNormally) {
-            startAnotherThread();
         }
     }
 
@@ -235,29 +248,44 @@ public final class TaskRunner2 implements TaskRunner {
 
     @Override
     public @NonNull ScheduledTaskQueue newScheduledQueue() {
-        return new TaskQueue2(this, "Q" + nextQueueName.getAndIncrement(), new PriorityQueue<>());
+        return new TaskQueue2(this, "Q" + nextQueueIndex.getAndIncrement(), new PriorityQueue<>());
     }
 
     @Override
     public void execute(final boolean cancellable, final Runnable block) {
         assert block != null;
+        final var task = new Task2("T" + nextTaskIndex, cancellable) {
+            @Override
+            protected long runOnce() {
+                block.run();
+                return -1L;
+            }
+        };
 
-        // todo build the task and call
-        //new TaskQueue3(this, "Q" + nextQueueName.getAndIncrement(), Collections.singleton(task));
-        final var queue = newQueue();
-        queue.execute(queue.getName() + "-task", cancellable, block);
+        task.nextExecuteNanoTime = nanoTime();
+
+        lock.lock();
         try {
-            queue.idleLatch().await();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            futureTasks.add(task);
+
+            // Impact the coordinator if we inserted at the front.
+            if (futureTasks.element() == task) {
+                kickCoordinator();
+            }
         } finally {
-            queue.shutdown();
+            lock.unlock();
         }
     }
 
     @Override
     public void shutdown() {
-        executor.shutdown();
+        lock.lock();
+        try {
+            cancelAll();
+            executor.shutdown();
+        } finally {
+            lock.unlock();
+        }
     }
 
     public long nanoTime() {
@@ -288,8 +316,9 @@ public final class TaskRunner2 implements TaskRunner {
             final var task = tasksIterator.next();
             if (task.cancellable) {
                 tasksIterator.remove();
-                assert task.queue != null;
-                task.queue.futureTasks.remove(task);
+                if (task.queue != null) {
+                    task.queue.futureTasks.remove(task);
+                }
             }
         }
     }

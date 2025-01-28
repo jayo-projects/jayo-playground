@@ -73,7 +73,7 @@ open class TaskRunnerBenchmark {
 
     @TearDown(Level.Invocation)
     fun tearDown() {
-        executor.shutdownNow()
+        taskRunner.shutdown()
     }
 
     @Benchmark
