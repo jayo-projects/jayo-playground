@@ -16,7 +16,7 @@ import java.util.stream.Stream;
  * <b>Be careful</b>, the returned boolean of our {@link #offer(Object)} method does not respect the
  * {@link Queue#offer(Object)} rationale, it has been adapted to our need. Read its javadoc for details.
  */
-public interface BasicQueue<T> extends Queue<T> {
+public interface BasicFifoQueue<T> extends Queue<T> {
     /**
      * Inserts the specified element into this queue.
      * @return true if element is alone in this queue, meaning this queue was empty before that.
