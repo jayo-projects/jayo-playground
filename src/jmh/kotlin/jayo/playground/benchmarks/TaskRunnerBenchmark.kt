@@ -12,7 +12,7 @@ import java.util.concurrent.*
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class TaskRunnerBenchmark {
-    @Param("1", "2")
+    @Param("1", "2", "3")
     private var schedulerVersion = 0
 
     @Param("virtual"/*, "pooled"*/)
@@ -65,6 +65,7 @@ open class TaskRunnerBenchmark {
         taskRunner = when (schedulerVersion) {
             1 -> TaskRunner.create1(executor)
             2 -> TaskRunner.create2(executor)
+            3 -> TaskRunner.create3(executor)
             else -> throw IllegalStateException("Unknown scheduler version: $schedulerVersion")
         }
 

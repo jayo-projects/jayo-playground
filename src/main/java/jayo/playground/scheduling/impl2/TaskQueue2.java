@@ -25,6 +25,7 @@ import jayo.playground.scheduling.ScheduledTaskQueue;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
@@ -36,20 +37,17 @@ final class TaskQueue2 implements ScheduledTaskQueue {
 
     boolean shutdown = false;
 
-    /**
-     * Unordered scheduled tasks.
-     */
     @NonNull
-    final Queue<Task2> futureTasks;
+    final Queue<Task2> futureTasks = new PriorityQueue<>();
 
     /**
-     * This queue's currently-executing task, or null if none is currently executing.
+     * This queue's currently waiting for execution task in the {@link TaskRunner2}, or null if no future tasks.
      */
     @Nullable
     Task2 scheduledTask = null;
 
     /**
-     * This queue's currently-executing task, or null if none is currently executing.
+     * This queue's currently executing task, or null if none is currently executing.
      */
     @Nullable
     Task2 activeTask = null;
@@ -60,15 +58,12 @@ final class TaskQueue2 implements ScheduledTaskQueue {
     boolean cancelActiveTask = false;
 
     TaskQueue2(final @NonNull TaskRunner2 taskRunner,
-               final @NonNull String name,
-               final @NonNull Queue<Task2> futureTasks) {
+               final @NonNull String name) {
         assert taskRunner != null;
         assert name != null;
-        assert futureTasks != null;
 
         this.taskRunner = taskRunner;
         this.name = name;
-        this.futureTasks = futureTasks;
     }
 
     @Override
@@ -92,7 +87,7 @@ final class TaskQueue2 implements ScheduledTaskQueue {
     }
 
     @Override
-    public void execute(final @NonNull String name, final boolean cancellable, final Runnable block) {
+    public void execute(final @NonNull String name, final boolean cancellable, final @NonNull Runnable block) {
         assert name != null;
         assert block != null;
 
@@ -126,7 +121,6 @@ final class TaskQueue2 implements ScheduledTaskQueue {
                 if (task.cancellable) {
                     return;
                 }
-                System.out.println("Task " + task + " is refused");
                 throw new RejectedExecutionException();
             }
 

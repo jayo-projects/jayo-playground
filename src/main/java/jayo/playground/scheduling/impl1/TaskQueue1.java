@@ -83,7 +83,7 @@ final class TaskQueue1 implements ScheduledTaskQueue {
     }
 
     @Override
-    public void execute(final @NonNull String name, final boolean cancellable, final Runnable block) {
+    public void execute(final @NonNull String name, final boolean cancellable, final @NonNull Runnable block) {
         assert name != null;
         assert block != null;
 
