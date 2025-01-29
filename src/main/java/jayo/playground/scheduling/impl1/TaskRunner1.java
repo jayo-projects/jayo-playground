@@ -269,18 +269,24 @@ public final class TaskRunner1 implements TaskRunner {
     public void execute(boolean cancellable, Runnable block) {
         final var queue = newQueue();
         queue.execute(queue.getName() + "-task", cancellable, block);
-        try {
-            queue.idleLatch().await();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        } finally {
-            queue.shutdown();
-        }
+//        try {
+//            queue.idleLatch().await();
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        } finally {
+//            queue.shutdown();
+//        }
     }
 
     @Override
     public void shutdown() {
-        executor.shutdown();
+        lock.lock();
+        try {
+            cancelAll();
+            executor.shutdown();
+        } finally {
+            lock.unlock();
+        }
     }
 
     public long nanoTime() {
