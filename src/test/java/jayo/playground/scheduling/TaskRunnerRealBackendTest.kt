@@ -61,6 +61,7 @@ class TaskRunnerRealBackendTest {
                 Arguments.of(TaskRunner.create1(Executors.newThreadPerTaskExecutor(threadFactory))),
                 Arguments.of(TaskRunner.create2(Executors.newThreadPerTaskExecutor(threadFactory))),
                 Arguments.of(TaskRunner.create3(Executors.newThreadPerTaskExecutor(threadFactory))),
+                Arguments.of(TaskRunner.create4(Executors.newThreadPerTaskExecutor(threadFactory))),
             )
     }
 

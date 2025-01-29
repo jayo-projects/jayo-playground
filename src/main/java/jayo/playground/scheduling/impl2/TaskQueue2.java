@@ -228,7 +228,6 @@ final class TaskQueue2 implements ScheduledTaskQueue {
     /**
      * @return true if the coordinator is impacted.
      */
-    @SuppressWarnings("UnusedReturnValue")
     boolean cancelAllAndDecide() {
         if (activeTask != null && activeTask.cancellable) {
             cancelActiveTask = true;

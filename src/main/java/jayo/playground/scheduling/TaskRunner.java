@@ -24,6 +24,7 @@ package jayo.playground.scheduling;
 import jayo.playground.scheduling.impl1.TaskRunner1;
 import jayo.playground.scheduling.impl2.TaskRunner2;
 import jayo.playground.scheduling.impl3.TaskRunner3;
+import jayo.playground.scheduling.impl4.TaskRunner4;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Objects;
@@ -52,6 +53,11 @@ public interface TaskRunner {
     static TaskRunner create3(final @NonNull ExecutorService executor) {
         Objects.requireNonNull(executor);
         return new TaskRunner3(executor);
+    }
+
+    static TaskRunner create4(final @NonNull ExecutorService executor) {
+        Objects.requireNonNull(executor);
+        return new TaskRunner4(executor);
     }
 
     @NonNull

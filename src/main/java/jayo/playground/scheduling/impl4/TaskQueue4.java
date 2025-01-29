@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package jayo.playground.scheduling.impl3;
+package jayo.playground.scheduling.impl4;
 
 import jayo.playground.scheduling.ScheduledTaskQueue;
 import jayo.playground.scheduling.TaskQueue;
@@ -33,8 +33,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.LongSupplier;
 
-sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
-    final @NonNull TaskRunner3 taskRunner;
+sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
+    final @NonNull TaskRunner4 taskRunner;
     final @NonNull String name;
 
     boolean shutdown = false;
@@ -43,7 +43,7 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
     final Queue<T> futureTasks;
 
     /**
-     * This queue's currently waiting for execution task in the {@link TaskRunner3}, or null if no future tasks.
+     * This queue's currently waiting for execution task in the {@link TaskRunner4}, or null if no future tasks.
      */
     @Nullable
     T scheduledTask = null;
@@ -54,12 +54,7 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
     @Nullable
     T activeTask = null;
 
-    /**
-     * True if the {@link #activeTask} should be canceled when it completes.
-     */
-    boolean cancelActiveTask = false;
-
-    TaskQueue3(final @NonNull TaskRunner3 taskRunner,
+    TaskQueue4(final @NonNull TaskRunner4 taskRunner,
                final @NonNull String name,
                final @NonNull Queue<T> futureTasks) {
         assert taskRunner != null;
@@ -71,90 +66,23 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
         this.futureTasks = futureTasks;
     }
 
-    /**
-     * Schedules {@code task} for execution in {@code delayNanos}. A task may only have one future execution scheduled.
-     * If the task is already in the queue, the earliest execution time is used.
-     * <p>
-     * The target execution time is implemented on a best-effort basis. If another task in this queue is running when
-     * that time is reached, that task is allowed to complete before this task is started. Similarly, the task will be
-     * delayed if the host lacks compute resources.
-     *
-     * @throws RejectedExecutionException if the queue is shut down and the task is not cancelable.
-     */
-    void schedule(final @NonNull T task, final long delayNanos) {
-        assert task != null;
-        assert delayNanos >= 0;
-
-        taskRunner.lock.lock();
-        try {
-            if (shutdown) {
-                if (task.cancellable) {
-                    return;
-                }
-                throw new RejectedExecutionException();
-            }
-
-            if (scheduleAndDecide(task, delayNanos)) {
-                taskRunner.kickCoordinator();
-            }
-        } finally {
-            taskRunner.lock.unlock();
-        }
-    }
-
-    abstract boolean scheduleAndDecide(final @NonNull T task, final long delayNanos);
-
     @Override
     public @NonNull String getName() {
         return name;
     }
 
     @Override
-    public void shutdown() {
-        taskRunner.lock.lock();
-        try {
-            shutdown = true;
-            if (cancelAllAndDecide()) {
-                taskRunner.kickCoordinator();
-            }
-        } finally {
-            taskRunner.lock.unlock();
-        }
-    }
-
-    /**
-     * @return true if the coordinator is impacted.
-     */
-    boolean cancelAllAndDecide() {
-        if (activeTask != null && activeTask.cancellable) {
-            cancelActiveTask = true;
-        }
-
-        var tasksCanceled = false;
-        final var tasksIterator = futureTasks.iterator();
-        while (tasksIterator.hasNext()) {
-            final var task = tasksIterator.next();
-            if (task.cancellable) {
-                tasksIterator.remove();
-                // also remove from the task runner
-                if (scheduledTask == task) {
-                    tasksCanceled = true;
-                    removeFromTaskRunner(task);
-                }
-            }
-        }
-        return tasksCanceled;
-    }
-
-    abstract void removeFromTaskRunner(final @NonNull T task);
-
-    @Override
     public @NonNull String toString() {
         return name;
     }
 
-    static final class ScheduledQueue extends TaskQueue3<Task3.ScheduledTask> implements ScheduledTaskQueue {
-        ScheduledQueue(final @NonNull TaskRunner3 taskRunner, final @NonNull String name) {
+    static final class ScheduledQueue extends TaskQueue4<Task4.ScheduledTask> implements ScheduledTaskQueue {
+        /**
+         * True if the {@link #activeTask} should be canceled when it completes.
+         */
+        boolean cancelActiveTask = false;
+
+        ScheduledQueue(final @NonNull TaskRunner4 taskRunner, final @NonNull String name) {
             super(taskRunner, name, new PriorityQueue<>());
         }
 
@@ -164,7 +92,7 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
             assert initialDelayNanos >= 0;
             assert block != null;
 
-            schedule(new Task3.@NonNull ScheduledTask(name, true) {
+            schedule(new Task4.@NonNull ScheduledTask(name, true) {
                 @Override
                 protected long runOnce() {
                     return block.getAsLong();
@@ -177,7 +105,7 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
             assert name != null;
             assert block != null;
 
-            schedule(new Task3.@NonNull ScheduledTask(name, cancellable) {
+            schedule(new Task4.@NonNull ScheduledTask(name, cancellable) {
                 @Override
                 protected long runOnce() {
                     block.run();
@@ -187,8 +115,21 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
         }
 
         @Override
+        public void shutdown() {
+            taskRunner.scheduledLock.lock();
+            try {
+                shutdown = true;
+                if (cancelAllAndDecide()) {
+                    taskRunner.kickScheduledCoordinator();
+                }
+            } finally {
+                taskRunner.scheduledLock.unlock();
+            }
+        }
+
+        @Override
         public @NonNull CountDownLatch idleLatch() {
-            taskRunner.lock.lock();
+            taskRunner.scheduledLock.lock();
             try {
                 // If the queue is already idle, that's easy.
                 if (futureTasks.isEmpty()) {
@@ -209,15 +150,15 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
                 // Don't delegate to schedule() because that enforces shutdown rules.
                 final var newTask = new AwaitIdleTask();
                 if (scheduleAndDecide(newTask, 0L)) {
-                    taskRunner.kickCoordinator();
+                    taskRunner.kickScheduledCoordinator();
                 }
                 return newTask.latch;
             } finally {
-                taskRunner.lock.unlock();
+                taskRunner.scheduledLock.unlock();
             }
         }
 
-        static final class AwaitIdleTask extends Task3.ScheduledTask {
+        static final class AwaitIdleTask extends Task4.ScheduledTask {
             private final @NonNull CountDownLatch latch = new CountDownLatch(1);
 
             private AwaitIdleTask() {
@@ -231,8 +172,38 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
             }
         }
 
-        @Override
-        boolean scheduleAndDecide(final Task3.@NonNull ScheduledTask task, final long delayNanos) {
+        /**
+         * Schedules {@code task} for execution in {@code delayNanos}. A task may only have one future execution scheduled.
+         * If the task is already in the queue, the earliest execution time is used.
+         * <p>
+         * The target execution time is implemented on a best-effort basis. If another task in this queue is running when
+         * that time is reached, that task is allowed to complete before this task is started. Similarly, the task will be
+         * delayed if the host lacks compute resources.
+         *
+         * @throws RejectedExecutionException if the queue is shut down and the task is not cancelable.
+         */
+        private void schedule(final Task4.@NonNull ScheduledTask task, final long delayNanos) {
+            assert task != null;
+            assert delayNanos >= 0;
+
+            taskRunner.scheduledLock.lock();
+            try {
+                if (shutdown) {
+                    if (task.cancellable) {
+                        return;
+                    }
+                    throw new RejectedExecutionException();
+                }
+
+                if (scheduleAndDecide(task, delayNanos)) {
+                    taskRunner.kickScheduledCoordinator();
+                }
+            } finally {
+                taskRunner.scheduledLock.unlock();
+            }
+        }
+
+        boolean scheduleAndDecide(final Task4.@NonNull ScheduledTask task, final long delayNanos) {
             assert task != null;
 
             task.initQueue(this);
@@ -267,15 +238,33 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
             return taskRunner.futureScheduledTasks.element() == task;
         }
 
-        @Override
-        void removeFromTaskRunner(final Task3.@NonNull ScheduledTask task) {
-            assert task != null;
-            taskRunner.futureScheduledTasks.remove(task);
+        /**
+         * @return true if the coordinator is impacted.
+         */
+        private boolean cancelAllAndDecide() {
+            if (activeTask != null && activeTask.cancellable) {
+                cancelActiveTask = true;
+            }
+
+            var tasksCanceled = false;
+            final var tasksIterator = futureTasks.iterator();
+            while (tasksIterator.hasNext()) {
+                final var task = tasksIterator.next();
+                if (task.cancellable) {
+                    tasksIterator.remove();
+                    // also remove from the task runner
+                    if (scheduledTask == task) {
+                        tasksCanceled = true;
+                        taskRunner.futureScheduledTasks.remove(task);
+                    }
+                }
+            }
+            return tasksCanceled;
         }
     }
 
-    static final class RunnableQueue extends TaskQueue3<Task3.RunnableTask> {
-        RunnableQueue(final @NonNull TaskRunner3 taskRunner, final @NonNull String name) {
+    static final class RunnableQueue extends TaskQueue4<Task4.RunnableTask> {
+        RunnableQueue(final @NonNull TaskRunner4 taskRunner, final @NonNull String name) {
             super(taskRunner, name, new LinkedList<>());
         }
 
@@ -284,12 +273,23 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
             assert name != null;
             assert block != null;
 
-            schedule(new Task3.@NonNull RunnableTask(name, cancellable) {
+            schedule(new Task4.@NonNull RunnableTask(name, cancellable) {
                 @Override
                 public void run() {
                     block.run();
                 }
-            }, 0L);
+            });
+        }
+
+        @Override
+        public void shutdown() {
+            taskRunner.lock.lock();
+            try {
+                shutdown = true;
+                cancelAllAndDecide();
+            } finally {
+                taskRunner.lock.unlock();
+            }
         }
 
         @Override
@@ -314,8 +314,8 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
 
                 // Don't delegate to schedule() because that enforces shutdown rules.
                 final var newTask = new AwaitIdleTask();
-                if (scheduleAndDecide(newTask, 0L)) {
-                    taskRunner.kickCoordinator();
+                if (scheduleAndDecide(newTask)) {
+                    taskRunner.startAnotherThread();
                 }
                 return newTask.latch;
             } finally {
@@ -323,7 +323,7 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
             }
         }
 
-        static final class AwaitIdleTask extends Task3.RunnableTask {
+        static final class AwaitIdleTask extends Task4.RunnableTask {
             private final @NonNull CountDownLatch latch = new CountDownLatch(1);
 
             private AwaitIdleTask() {
@@ -336,8 +336,37 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
             }
         }
 
-        @Override
-        boolean scheduleAndDecide(final Task3.@NonNull RunnableTask task, long delayNanos) {
+        /**
+         * Schedules {@code task} for execution in {@code delayNanos}. A task may only have one future execution scheduled.
+         * If the task is already in the queue, the earliest execution time is used.
+         * <p>
+         * The target execution time is implemented on a best-effort basis. If another task in this queue is running when
+         * that time is reached, that task is allowed to complete before this task is started. Similarly, the task will be
+         * delayed if the host lacks compute resources.
+         *
+         * @throws RejectedExecutionException if the queue is shut down and the task is not cancelable.
+         */
+        private void schedule(final Task4.@NonNull RunnableTask task) {
+            assert task != null;
+
+            taskRunner.lock.lock();
+            try {
+                if (shutdown) {
+                    if (task.cancellable) {
+                        return;
+                    }
+                    throw new RejectedExecutionException();
+                }
+
+                if (scheduleAndDecide(task)) {
+                    taskRunner.startAnotherThread();
+                }
+            } finally {
+                taskRunner.lock.unlock();
+            }
+        }
+
+        private boolean scheduleAndDecide(final Task4.@NonNull RunnableTask task) {
             assert task != null;
 
             task.initQueue(this);
@@ -355,14 +384,24 @@ sealed abstract class TaskQueue3<T extends Task3<T>> implements TaskQueue {
             }
 
             scheduledTask = task;
+            final var wasEmpty = taskRunner.futureTasks.isEmpty();
             taskRunner.futureTasks.offer(task);
-            return true;
+
+            return wasEmpty;
         }
 
-        @Override
-        void removeFromTaskRunner(final Task3.@NonNull RunnableTask task) {
-            assert task != null;
-            taskRunner.futureTasks.remove(task);
+        private void cancelAllAndDecide() {
+            final var tasksIterator = futureTasks.iterator();
+            while (tasksIterator.hasNext()) {
+                final var task = tasksIterator.next();
+                if (task.cancellable) {
+                    tasksIterator.remove();
+                    // also remove from the task runner
+                    if (scheduledTask == task) {
+                        taskRunner.futureTasks.remove(task);
+                    }
+                }
+            }
         }
     }
 }
