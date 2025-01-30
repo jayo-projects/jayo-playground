@@ -172,6 +172,32 @@ public interface Reader extends RawReader {
     String readString(final long byteCount, final @NonNull Charset charset);
 
     /**
+     * Reads a long form this reader in hexadecimal form (i.e., as a string in base 16).
+     * <p>
+     * Reader data will be consumed until the reader is exhausted, the first occurrence of non-digit byte, or overflow
+     * happened during resulting value construction.
+     * <pre>
+     * {@code
+     * Buffer buffer = Buffer.create()
+     * .write("ffff CAFEBABE 10");
+     *
+     * assertThat(buffer.readHexadecimalUnsignedLong()).isEqualTo(65535L);
+     * assertThat(buffer.readByte()).isEqualTo(' ');
+     * assertThat(buffer.readHexadecimalUnsignedLong()).isEqualTo(0xcafebabeL);
+     * assertThat(buffer.readByte()).isEqualTo(' ');
+     * assertThat(buffer.readHexadecimalUnsignedLong()).isEqualTo(0x10L);
+     * }
+     * </pre>
+     *
+     * @return the read hexadecimal long value
+     * @throws NumberFormatException       if the found hexadecimal does not fit into a long or a hexadecimal number was not
+     *                                     present.
+     * @throws JayoEOFException            if the reader is exhausted before a call of this method.
+     * @throws JayoClosedResourceException if this reader is closed.
+     */
+    long readHexadecimalUnsignedLong();
+
+    /**
      * Returns a new {@link Reader} that can read data from this reader without consuming it.
      * The returned reader becomes invalid once this reader is next read or closed.
      * <p>

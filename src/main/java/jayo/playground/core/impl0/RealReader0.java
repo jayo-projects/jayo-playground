@@ -91,6 +91,12 @@ public final class RealReader0 implements Reader {
     }
 
     @Override
+    public long readHexadecimalUnsignedLong() {
+        request(17L);
+        return segmentQueue.buffer.readHexadecimalUnsignedLong();
+    }
+
+    @Override
     public long bytesAvailable() {
         if (segmentQueue.closed) {
             throw new JayoClosedResourceException();

@@ -29,6 +29,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 
 class RealAsyncReaderTest : AbstractReaderTest(ReaderFactory.REAL_ASYNC_SOURCE)
@@ -73,6 +74,15 @@ abstract class AbstractReaderTest internal constructor(private val factory: Read
     @Test
     fun exhausted() {
         assertThat(reader.exhausted()).isTrue()
+    }
+
+    // this test is a good race-condition test, do it several times !
+    @RepeatedTest(50)
+    fun longHexAlphabet() {
+        writer.write("7896543210abcdef")
+        assertThat(reader.readHexadecimalUnsignedLong()).isEqualTo(0x7896543210abcdefL)
+        writer.write("ABCDEF")
+        assertThat(reader.readHexadecimalUnsignedLong()).isEqualTo(0xabcdefL)
     }
 
     @Test

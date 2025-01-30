@@ -672,6 +672,72 @@ public final class RealBuffer0 implements Buffer {
     }
 
     @Override
+    public long readHexadecimalUnsignedLong() {
+        final var currentSize = segmentQueue.size();
+        if (currentSize == 0L) {
+            throw new JayoEOFException();
+        }
+
+        // This value is always built negatively in order to accommodate Long.MIN_VALUE.
+        var value = 0L;
+        var seen = 0;
+        var done = false;
+
+        while (!done) {
+            if (seen >= currentSize && segmentQueue.expectSize(17L) == 0L) {
+                break;
+            }
+            final var head = segmentQueue.head();
+            assert head != null;
+            final var data = head.data;
+            var pos = head.pos;
+            final var currentLimit = head.limitVolatile();
+
+            while (pos < currentLimit) {
+                final int digit;
+
+                final var b = data[pos];
+                if (b >= (byte) ((int) '0') && b <= (byte) ((int) '9')) {
+                    digit = b - (byte) ((int) '0');
+                } else if (b >= (byte) ((int) 'a') && b <= (byte) ((int) 'f')) {
+                    digit = b - (byte) ((int) 'a') + 10;
+                } else if (b >= (byte) ((int) 'A') && b <= (byte) ((int) 'F')) {
+                    digit = b - (byte) ((int) 'A') + 10; // We never write uppercase, but we support reading it.
+                } else {
+                    if (seen == 0) {
+                        throw new NumberFormatException(
+                                "Expected leading [0-9a-fA-F] character but was 0x...");
+                    }
+                    // Set a flag to stop iteration. We still need to run through segment updating below.
+                    done = true;
+                    break;
+                }
+
+                // Detect when the shift will overflow.
+                if ((value & -0x1000000000000000L) != 0L) {
+                    throw new NumberFormatException("Number too large !");
+                }
+
+                value = value << 4;
+                value = value | (long) digit;
+                pos++;
+                seen++;
+            }
+
+            final var read = pos - head.pos;
+            head.pos = pos;
+            segmentQueue.decrementSize(read);
+
+            if (pos == currentLimit && head.tryRemove() && head.validateRemove()) {
+                segmentQueue.removeHead(head);
+                SegmentPool.recycle(head);
+            }
+        }
+
+        return value;
+    }
+
+    @Override
     public void flush() {
     }
 
