@@ -40,7 +40,8 @@ jmh {
     duplicateClassesStrategy = WARN
     jmhVersion = catalogVersion("jmh")
 
-    includes.set(listOf("""jayo\.playground\.benchmarks\.TaskRunnerBenchmark.*"""))
+//    includes.set(listOf("""jayo\.playground\.benchmarks\.TaskRunnerBenchmark.*"""))
+    includes.set(listOf("""jayo\.playground\.benchmarks\.BufferUtf8Benchmark.*"""))
 }
 
 tasks {
