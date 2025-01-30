@@ -19,22 +19,22 @@
  * limitations under the License.
  */
 
-package jayo.playground.scheduling.impl4;
+package jayo.playground.scheduling.impl5;
 
+import jayo.playground.scheduling.BasicFifoQueue;
 import jayo.playground.scheduling.ScheduledTaskQueue;
 import jayo.playground.scheduling.TaskQueue;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.LongSupplier;
 
-sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
-    final @NonNull TaskRunner4 taskRunner;
+sealed abstract class TaskQueue5<T extends Task5<T>> implements TaskQueue {
+    final @NonNull TaskRunner5 taskRunner;
     final @NonNull String name;
 
     boolean shutdown = false;
@@ -43,7 +43,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
     final Queue<T> futureTasks;
 
     /**
-     * This queue's currently waiting for execution task in the {@link TaskRunner4}, or null if no future tasks.
+     * This queue's currently waiting for execution task in the {@link TaskRunner5}, or null if no future tasks.
      */
     @Nullable
     T scheduledTask = null;
@@ -54,7 +54,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
     @Nullable
     T activeTask = null;
 
-    TaskQueue4(final @NonNull TaskRunner4 taskRunner,
+    TaskQueue5(final @NonNull TaskRunner5 taskRunner,
                final @NonNull String name,
                final @NonNull Queue<T> futureTasks) {
         assert taskRunner != null;
@@ -76,13 +76,13 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
         return name;
     }
 
-    static final class ScheduledQueue extends TaskQueue4<Task4.ScheduledTask> implements ScheduledTaskQueue {
+    static final class ScheduledQueue extends TaskQueue5<Task5.ScheduledTask> implements ScheduledTaskQueue {
         /**
          * True if the {@link #activeTask} should be canceled when it completes.
          */
         boolean cancelActiveTask = false;
 
-        ScheduledQueue(final @NonNull TaskRunner4 taskRunner, final @NonNull String name) {
+        ScheduledQueue(final @NonNull TaskRunner5 taskRunner, final @NonNull String name) {
             super(taskRunner, name, new PriorityQueue<>());
         }
 
@@ -92,7 +92,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
             assert initialDelayNanos >= 0;
             assert block != null;
 
-            schedule(new Task4.@NonNull ScheduledTask(name, true) {
+            schedule(new Task5.@NonNull ScheduledTask(name, true) {
                 @Override
                 protected long runOnce() {
                     return block.getAsLong();
@@ -105,7 +105,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
             assert name != null;
             assert block != null;
 
-            schedule(new Task4.@NonNull ScheduledTask(name, cancellable) {
+            schedule(new Task5.@NonNull ScheduledTask(name, cancellable) {
                 @Override
                 protected long runOnce() {
                     block.run();
@@ -158,7 +158,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
             }
         }
 
-        static final class AwaitIdleTask extends Task4.ScheduledTask {
+        static final class AwaitIdleTask extends Task5.ScheduledTask {
             private final @NonNull CountDownLatch latch = new CountDownLatch(1);
 
             private AwaitIdleTask() {
@@ -182,7 +182,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
          *
          * @throws RejectedExecutionException if the queue is shut down and the task is not cancelable.
          */
-        private void schedule(final Task4.@NonNull ScheduledTask task, final long delayNanos) {
+        private void schedule(final Task5.@NonNull ScheduledTask task, final long delayNanos) {
             assert task != null;
             assert delayNanos >= 0;
 
@@ -203,7 +203,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
             }
         }
 
-        boolean scheduleAndDecide(final Task4.@NonNull ScheduledTask task, final long delayNanos) {
+        boolean scheduleAndDecide(final Task5.@NonNull ScheduledTask task, final long delayNanos) {
             assert task != null;
 
             task.initQueue(this);
@@ -263,9 +263,9 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
         }
     }
 
-    static final class RunnableQueue extends TaskQueue4<Task4.RunnableTask> {
-        RunnableQueue(final @NonNull TaskRunner4 taskRunner, final @NonNull String name) {
-            super(taskRunner, name, new LinkedList<>());
+    static final class RunnableQueue extends TaskQueue5<Task5.RunnableTask> {
+        RunnableQueue(final @NonNull TaskRunner5 taskRunner, final @NonNull String name) {
+            super(taskRunner, name, BasicFifoQueue.create());
         }
 
         @Override
@@ -273,7 +273,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
             assert name != null;
             assert block != null;
 
-            schedule(new Task4.@NonNull RunnableTask(name, cancellable) {
+            schedule(new Task5.@NonNull RunnableTask(name, cancellable) {
                 @Override
                 public void run() {
                     block.run();
@@ -323,7 +323,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
             }
         }
 
-        static final class AwaitIdleTask extends Task4.RunnableTask {
+        static final class AwaitIdleTask extends Task5.RunnableTask {
             private final @NonNull CountDownLatch latch = new CountDownLatch(1);
 
             private AwaitIdleTask() {
@@ -346,7 +346,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
          *
          * @throws RejectedExecutionException if the queue is shut down and the task is not cancelable.
          */
-        private void schedule(final Task4.@NonNull RunnableTask task) {
+        private void schedule(final Task5.@NonNull RunnableTask task) {
             assert task != null;
 
             taskRunner.lock.lock();
@@ -366,7 +366,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
             }
         }
 
-        private boolean scheduleAndDecide(final Task4.@NonNull RunnableTask task) {
+        private boolean scheduleAndDecide(final Task5.@NonNull RunnableTask task) {
             assert task != null;
 
             task.initQueue(this);
@@ -384,10 +384,8 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
             }
 
             scheduledTask = task;
-            final var wasEmpty = taskRunner.futureTasks.isEmpty();
-            taskRunner.futureTasks.offer(task);
 
-            return wasEmpty;
+            return taskRunner.futureTasks.offer(task);
         }
 
         private void cancelAllAndDecide() {
@@ -404,6 +402,7 @@ sealed abstract class TaskQueue4<T extends Task4<T>> implements TaskQueue {
             }
             if (!futureTasks.isEmpty()) {
                 System.out.println("Cancelling futureTasks failed for queue " + this);
+                System.out.println("queue.head1 " + futureTasks.poll());
             }
         }
     }

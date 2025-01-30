@@ -62,6 +62,7 @@ class TaskRunnerRealBackendTest {
                 Arguments.of(TaskRunner.create2(Executors.newThreadPerTaskExecutor(threadFactory))),
                 Arguments.of(TaskRunner.create3(Executors.newThreadPerTaskExecutor(threadFactory))),
                 Arguments.of(TaskRunner.create4(Executors.newThreadPerTaskExecutor(threadFactory))),
+                Arguments.of(TaskRunner.create5(Executors.newThreadPerTaskExecutor(threadFactory))),
             )
     }
 
@@ -142,12 +143,30 @@ class TaskRunnerRealBackendTest {
     fun idleLatchAfterShutdown(taskRunner: TaskRunner) {
         val queue = taskRunner.newQueue()
         queue.execute("task", true) {
-            Thread.sleep(250)
+            Thread.sleep(200)
             taskRunner.shutdown()
         }
 
         assertThat(queue.idleLatch().count).isEqualTo(1)
-        assertThat(queue.idleLatch().await(500L, TimeUnit.MILLISECONDS)).isTrue()
+        assertThat(queue.idleLatch().await(400L, TimeUnit.MILLISECONDS)).isTrue()
         assertThat(queue.idleLatch().count).isEqualTo(0)
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    fun queueShutdown(taskRunner: TaskRunner) {
+        val queue = taskRunner.newQueue()
+        queue.execute("task1", true) {
+            Thread.sleep(200)
+            log.put("task1")
+        }
+        queue.execute("task2", true) {
+            Thread.sleep(200)
+            log.put("task2")
+        }
+
+        queue.shutdown()
+
+        assertThat(log).isEmpty()
     }
 }

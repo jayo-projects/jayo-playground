@@ -19,14 +19,14 @@
  * limitations under the License.
  */
 
-package jayo.playground.scheduling.impl4;
+package jayo.playground.scheduling.impl5;
 
+import jayo.playground.scheduling.BasicFifoQueue;
 import jayo.playground.scheduling.ScheduledTaskQueue;
 import jayo.playground.scheduling.TaskQueue;
 import jayo.playground.scheduling.TaskRunner;
 import org.jspecify.annotations.NonNull;
 
-import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.ExecutorService;
@@ -36,7 +36,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public final class TaskRunner4 implements TaskRunner {
+public final class TaskRunner5 implements TaskRunner {
     private final @NonNull ExecutorService executor;
 
     private final AtomicLong nextTaskIndex = new AtomicLong(10000);
@@ -60,18 +60,18 @@ public final class TaskRunner4 implements TaskRunner {
     /**
      * sequential tasks FIFO ordered.
      */
-    final Queue<Task4.RunnableTask> futureTasks = new LinkedList<>();
+    final BasicFifoQueue<Task5.RunnableTask> futureTasks = BasicFifoQueue.create();
     /**
-     * Scheduled tasks ordered by {@link Task4.ScheduledTask#nextExecuteNanoTime}.
+     * Scheduled tasks ordered by {@link Task5.ScheduledTask#nextExecuteNanoTime}.
      */
-    final Queue<Task4.ScheduledTask> futureScheduledTasks = new PriorityQueue<>();
+    final Queue<Task5.ScheduledTask> futureScheduledTasks = new PriorityQueue<>();
 
-    public TaskRunner4(final @NonNull ExecutorService executor) {
+    public TaskRunner5(final @NonNull ExecutorService executor) {
         assert executor != null;
 
         this.executor = executor;
         scheduledRunnable = () -> {
-            Task4.ScheduledTask task;
+            Task5.ScheduledTask task;
             scheduledLock.lock();
             try {
                 scheduledRunCallCount++;
@@ -117,7 +117,7 @@ public final class TaskRunner4 implements TaskRunner {
         };
 
         runnable = () -> {
-            Task4.RunnableTask task;
+            Task5.RunnableTask task;
             lock.lock();
             try {
                 runCallCount++;
@@ -182,13 +182,13 @@ public final class TaskRunner4 implements TaskRunner {
         execute(scheduledRunnable);
     }
 
-    private <T extends Task4<T>> void beforeRun(final @NonNull T task) {
+    private <T extends Task5<T>> void beforeRun(final @NonNull T task) {
         assert task != null;
 
         final var queue = task.queue;
         if (queue != null) {
             final var removedTask = queue.futureTasks.poll();
-            if (removedTask != task || queue.scheduledTask != task) {
+            if (task != removedTask || queue.scheduledTask != task) {
                 throw new IllegalStateException("removedTask " + removedTask + " or queue.scheduledTask " +
                         queue.scheduledTask + " != task " + task);
             }
@@ -196,7 +196,7 @@ public final class TaskRunner4 implements TaskRunner {
         }
 
         switch (task) {
-            case Task4.RunnableTask runnableTask -> {
+            case Task5.RunnableTask runnableTask -> {
                 if (futureTasks.poll() != runnableTask) {
                     throw new IllegalStateException();
                 }
@@ -205,7 +205,7 @@ public final class TaskRunner4 implements TaskRunner {
                     startAnotherThread();
                 }
             }
-            case Task4.ScheduledTask scheduledTask -> {
+            case Task5.ScheduledTask scheduledTask -> {
                 scheduledTask.nextExecuteNanoTime = -1L;
                 if (futureScheduledTasks.poll() != scheduledTask) {
                     throw new IllegalStateException();
@@ -219,12 +219,12 @@ public final class TaskRunner4 implements TaskRunner {
         }
     }
 
-    private void afterScheduledRun(final Task4.@NonNull ScheduledTask task,
+    private void afterScheduledRun(final Task5.@NonNull ScheduledTask task,
                                    final long delayNanos,
                                    final boolean completedNormally) {
         assert task != null;
 
-        final var queue = (TaskQueue4.ScheduledQueue) task.queue;
+        final var queue = (TaskQueue5.ScheduledQueue) task.queue;
         if (queue != null) {
             afterScheduledRun(task, delayNanos, queue);
         }
@@ -235,9 +235,9 @@ public final class TaskRunner4 implements TaskRunner {
         }
     }
 
-    private void afterScheduledRun(final Task4.@NonNull ScheduledTask task,
+    private void afterScheduledRun(final Task5.@NonNull ScheduledTask task,
                                    final long delayNanos,
-                                   final TaskQueue4.@NonNull ScheduledQueue queue) {
+                                   final TaskQueue5.@NonNull ScheduledQueue queue) {
         if (queue.activeTask != task) {
             throw new IllegalStateException("Task queue " + queue.name + " is not active." +
                     " queue.activeTask " + queue.activeTask + " != task " + task);
@@ -267,7 +267,7 @@ public final class TaskRunner4 implements TaskRunner {
      * ready. If there are no ready task, or if other threads can execute it this will return null. If there is more
      * than a single task ready to execute immediately this will start another thread to handle that work.
      */
-    private Task4.ScheduledTask awaitScheduledTaskToRun() {
+    private Task5.ScheduledTask awaitScheduledTaskToRun() {
         while (true) {
             final var scheduledTask = futureScheduledTasks.peek();
             if (scheduledTask == null) {
@@ -312,7 +312,7 @@ public final class TaskRunner4 implements TaskRunner {
     }
 
 
-    private Task4.RunnableTask awaitTaskToRun() {
+    private Task5.RunnableTask awaitTaskToRun() {
         // try to peek a runnable task
         final var task = futureTasks.peek();
         if (task == null) {
@@ -335,10 +335,10 @@ public final class TaskRunner4 implements TaskRunner {
         execute(runnable);
     }
 
-    private void afterRun(final Task4.@NonNull RunnableTask task, final boolean completedNormally) {
+    private void afterRun(final Task5.@NonNull RunnableTask task, final boolean completedNormally) {
         assert task != null;
 
-        final var queue = (TaskQueue4.RunnableQueue) task.queue;
+        final var queue = (TaskQueue5.RunnableQueue) task.queue;
         if (queue != null) {
             afterRun(task, queue);
         }
@@ -349,7 +349,7 @@ public final class TaskRunner4 implements TaskRunner {
         }
     }
 
-    private void afterRun(final Task4.@NonNull RunnableTask task, final TaskQueue4.@NonNull RunnableQueue queue) {
+    private void afterRun(final Task5.@NonNull RunnableTask task, final TaskQueue5.@NonNull RunnableQueue queue) {
         if (queue.activeTask != task) {
             throw new IllegalStateException("Task queue " + queue.name + " is not active." +
                     " queue.activeTask " + queue.activeTask + " != task " + task);
@@ -370,18 +370,18 @@ public final class TaskRunner4 implements TaskRunner {
 
     @Override
     public @NonNull TaskQueue newQueue() {
-        return new TaskQueue4.RunnableQueue(this, "Q" + nextQueueIndex.getAndIncrement());
+        return new TaskQueue5.RunnableQueue(this, "Q" + nextQueueIndex.getAndIncrement());
     }
 
     @Override
     public @NonNull ScheduledTaskQueue newScheduledQueue() {
-        return new TaskQueue4.ScheduledQueue(this, "Q" + nextQueueIndex.getAndIncrement());
+        return new TaskQueue5.ScheduledQueue(this, "Q" + nextQueueIndex.getAndIncrement());
     }
 
     @Override
     public void execute(final boolean cancellable, final Runnable block) {
         assert block != null;
-        final var task = new Task4.RunnableTask("T" + nextTaskIndex, cancellable) {
+        final var task = new Task5.RunnableTask("T" + nextTaskIndex, cancellable) {
             @Override
             public void run() {
                 block.run();
@@ -390,8 +390,7 @@ public final class TaskRunner4 implements TaskRunner {
 
         lock.lock();
         try {
-            final var wasEmpty = futureTasks.isEmpty();
-            futureTasks.offer(task);
+            final var wasEmpty = futureTasks.offer(task);
             if (wasEmpty) {
                 startAnotherThread();
             }
@@ -440,7 +439,7 @@ public final class TaskRunner4 implements TaskRunner {
         cancelAll(futureScheduledTasks);
     }
 
-    private <T extends Task4<T>> void cancelAll(final @NonNull Queue<T> futureTasks) {
+    private <T extends Task5<T>> void cancelAll(final @NonNull Queue<T> futureTasks) {
         assert futureTasks != null;
 
         final var tasksIterator = futureTasks.iterator();
@@ -452,6 +451,9 @@ public final class TaskRunner4 implements TaskRunner {
                     task.queue.futureTasks.remove(task);
                 }
             }
+        }
+        if (!futureTasks.isEmpty()) {
+            System.out.println("Cancelling futureTasks failed");
         }
     }
 }
