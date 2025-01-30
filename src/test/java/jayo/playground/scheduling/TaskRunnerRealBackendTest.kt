@@ -27,6 +27,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.lang.Thread.UncaughtExceptionHandler
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
@@ -58,6 +59,7 @@ class TaskRunnerRealBackendTest {
         @JvmStatic
         private fun parameters() =
             Stream.of<Arguments>(
+                Arguments.of(TaskRunner.create0(Executors.newThreadPerTaskExecutor(threadFactory))),
                 Arguments.of(TaskRunner.create1(Executors.newThreadPerTaskExecutor(threadFactory))),
                 Arguments.of(TaskRunner.create2(Executors.newThreadPerTaskExecutor(threadFactory))),
                 Arguments.of(TaskRunner.create3(Executors.newThreadPerTaskExecutor(threadFactory))),
@@ -85,6 +87,9 @@ class TaskRunnerRealBackendTest {
         assertThat(log.take()).isEqualTo("runOnce delays.size=1")
         val t3 = System.nanoTime() / 1e6 - t1
         assertThat(t3).isCloseTo(1750.0, offset(250.0))
+        assertThat(log).isEmpty()
+
+        queue.shutdown()
     }
 
     @ParameterizedTest
@@ -100,6 +105,9 @@ class TaskRunnerRealBackendTest {
         assertThat(log.take()).isEqualTo("runOnce")
         val t2 = System.nanoTime() / 1e6 - t1
         assertThat(t2).isCloseTo(0.0, offset(250.0))
+        assertThat(log).isEmpty()
+
+        queue.shutdown()
     }
 
     @ParameterizedTest
@@ -114,6 +122,7 @@ class TaskRunnerRealBackendTest {
         assertThat(log.take()).isEqualTo("runOnce")
         val t2 = System.nanoTime() / 1e6 - t1
         assertThat(t2).isCloseTo(0.0, offset(250.0))
+        assertThat(log).isEmpty()
     }
 
     @ParameterizedTest
@@ -136,6 +145,8 @@ class TaskRunnerRealBackendTest {
         assertThat(log.take()).isEqualTo("uncaught exception: java.lang.RuntimeException: boom!")
         assertThat(log.take()).isEqualTo("normal task running")
         assertThat(log).isEmpty()
+
+        queue.shutdown()
     }
 
     @ParameterizedTest
@@ -150,23 +161,48 @@ class TaskRunnerRealBackendTest {
         assertThat(queue.idleLatch().count).isEqualTo(1)
         assertThat(queue.idleLatch().await(400L, TimeUnit.MILLISECONDS)).isTrue()
         assertThat(queue.idleLatch().count).isEqualTo(0)
+        assertThat(log).isEmpty()
+
+        queue.shutdown()
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    fun queueWait(taskRunner: TaskRunner) {
+        val queue = taskRunner.newQueue()
+        val countDownLatch = CountDownLatch(2)
+
+        queue.execute("task1", true) {
+            Thread.sleep(200)
+            countDownLatch.countDown()
+        }
+        queue.execute("task2", true) {
+            Thread.sleep(200)
+            countDownLatch.countDown()
+        }
+
+        val result = countDownLatch.await(500, TimeUnit.MILLISECONDS)
+        assertThat(result).isTrue
     }
 
     @ParameterizedTest
     @MethodSource("parameters")
     fun queueShutdown(taskRunner: TaskRunner) {
         val queue = taskRunner.newQueue()
+        val countDownLatch = CountDownLatch(2)
+
         queue.execute("task1", true) {
             Thread.sleep(200)
-            log.put("task1")
+            countDownLatch.countDown()
         }
         queue.execute("task2", true) {
             Thread.sleep(200)
-            log.put("task2")
+            countDownLatch.countDown()
         }
 
         queue.shutdown()
 
-        assertThat(log).isEmpty()
+        val result = countDownLatch.await(500, TimeUnit.MILLISECONDS)
+        assertThat(result).isFalse
     }
 }

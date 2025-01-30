@@ -139,4 +139,19 @@ class BasicFifoQueueTest {
         assertThat(queue.isEmpty()).isTrue
         assertThat(queue.offer(6)).isTrue
     }
+
+    @Test
+    fun testIteratorRemoveThenPeekThenOffer() {
+        val queue = BasicFifoQueue.create<String>()
+        queue.offer("1")
+
+        var iterator = queue.iterator()
+        assertThat(iterator.hasNext()).isTrue
+        assertThat(iterator.next()).isEqualTo("1")
+        iterator.remove()
+        assertThat(iterator.hasNext()).isFalse
+
+        assertThat(queue.peek()).isNull()
+        assertThat(queue.offer("1")).isTrue
+    }
 }

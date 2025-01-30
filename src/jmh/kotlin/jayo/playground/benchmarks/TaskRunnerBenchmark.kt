@@ -12,7 +12,7 @@ import java.util.concurrent.*
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class TaskRunnerBenchmark {
-    @Param(/*"1", "2", "3", */"4", "5")
+    @Param("0", "1", "2", "3", "4", "5")
     private var schedulerVersion = 0
 
     @Param("virtual"/*, "pooled"*/)
@@ -63,6 +63,7 @@ open class TaskRunnerBenchmark {
 
 
         taskRunner = when (schedulerVersion) {
+            0 -> TaskRunner.create0(executor)
             1 -> TaskRunner.create1(executor)
             2 -> TaskRunner.create2(executor)
             3 -> TaskRunner.create3(executor)

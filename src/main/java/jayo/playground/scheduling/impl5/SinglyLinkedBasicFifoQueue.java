@@ -112,12 +112,13 @@ public final class SinglyLinkedBasicFifoQueue<T> implements BasicFifoQueue<T> {
     }
 
     private final class SinglyLinkedIterator implements Iterator<T> {
+        private final @NonNull Node<T> virtualOrigin = new Node<>(null); // ok to put null, this first item is virtual
         private @NonNull Node<T> previous;
         private @NonNull Node<T> current;
         private boolean canRemove = false;
 
         private SinglyLinkedIterator() {
-            previous = new Node<>(null); // ok to put null, this first item is virtual
+            previous = virtualOrigin;
             current = previous;
             current.next = head;
         }
@@ -148,7 +149,7 @@ public final class SinglyLinkedBasicFifoQueue<T> implements BasicFifoQueue<T> {
                 head = current.next;
             }
             if (tail == current) {
-                tail = previous;
+                tail = previous != virtualOrigin ? previous : null;
             }
             previous.next = current.next;
             current = previous;

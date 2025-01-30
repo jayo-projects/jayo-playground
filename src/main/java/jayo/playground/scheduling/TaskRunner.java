@@ -21,6 +21,7 @@
 
 package jayo.playground.scheduling;
 
+import jayo.playground.scheduling.impl0.TaskRunner0;
 import jayo.playground.scheduling.impl1.TaskRunner1;
 import jayo.playground.scheduling.impl2.TaskRunner2;
 import jayo.playground.scheduling.impl3.TaskRunner3;
@@ -41,6 +42,11 @@ import java.util.concurrent.ExecutorService;
  * the benefit of container environments that implement code unloading.
  */
 public interface TaskRunner {
+    static TaskRunner create0(final @NonNull ExecutorService executor) {
+        Objects.requireNonNull(executor);
+        return new TaskRunner0(executor);
+    }
+
     static TaskRunner create1(final @NonNull ExecutorService executor) {
         Objects.requireNonNull(executor);
         return new TaskRunner1(executor);
