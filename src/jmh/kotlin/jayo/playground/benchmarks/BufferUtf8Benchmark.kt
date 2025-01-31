@@ -50,6 +50,9 @@ open class BufferUtf8Benchmark {
         )
     }
 
+    @Param("0", "1")
+    private var bufferVersion = 0
+
     @Param("20", "2000", "200000")
     private var length = 0
 
@@ -72,7 +75,11 @@ open class BufferUtf8Benchmark {
         encode = builder.toString()
 
         // Prepare a string and ByteString for encoding and decoding with Okio and Jayo
-        jayoBuffer = Buffer.create0()
+        jayoBuffer = when (bufferVersion) {
+            0 -> Buffer.create0()
+            1 -> Buffer.create1()
+            else -> throw IllegalStateException("Unknown buffer version: $bufferVersion")
+        }
     }
 
     @Benchmark

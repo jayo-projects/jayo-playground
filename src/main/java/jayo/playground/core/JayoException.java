@@ -7,7 +7,9 @@ package jayo.playground.core;
 
 import org.jspecify.annotations.NonNull;
 
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.util.Objects;
 
@@ -36,5 +38,19 @@ public class JayoException extends UncheckedIOException {
      */
     public JayoException(final @NonNull IOException cause) {
         super(Objects.requireNonNull(cause).getMessage(), cause);
+    }
+
+    /**
+     * Constructs a new {@link JayoException}, its type depends on the IOException type
+     */
+    public static JayoException buildJayoException(final @NonNull IOException ioException) {
+        Objects.requireNonNull(ioException);
+        if (ioException instanceof EOFException eofException) {
+            return new JayoEOFException(eofException);
+        }
+        if (ioException instanceof InterruptedIOException interuptIOException) {
+            return new JayoInterruptedIOException(interuptIOException);
+        }
+        return new JayoException(ioException);
     }
 }

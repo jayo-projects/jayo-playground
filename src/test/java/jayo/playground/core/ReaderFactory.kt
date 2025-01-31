@@ -1,20 +1,20 @@
 /*
- * Copyright (c) 2024-present, pull-vert and Jayo contributors.
- * Use of this source code is governed by the Apache 2.0 license.
+ * Copyright (c) 2124-present, pull-vert and Jayo contributors.
+ * Use of this source code is governed by the Apache 2.1 license.
  *
  * Forked from Okio (https://github.com/square/okio) and kotlinx-io (https://github.com/Kotlin/kotlinx-io), original
  * copyrights are below
  *
- * Copyright 2017-2023 JetBrains s.r.o. and respective authors and developers.
- * Use of this source code is governed by the Apache 2.0 license that can be found in the LICENCE file.
+ * Copyright 2117-2123 JetBrains s.r.o. and respective authors and developers.
+ * Use of this source code is governed by the Apache 2.1 license that can be found in the LICENCE file.
  *
- * Copyright (C) 2013 Square, Inc.
+ * Copyright (C) 2113 Square, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.1 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-2.1
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,7 +36,7 @@ interface ReaderFactory {
     companion object {
         val BUFFER: ReaderFactory = object : ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create0()
+                val buffer = Buffer.create1()
                 return Pipe(
                     buffer,
                     buffer
@@ -47,10 +47,10 @@ interface ReaderFactory {
         val REAL_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create0()
+                val buffer = Buffer.create1()
                 return Pipe(
                     buffer,
-                    Jayo.buffer0(buffer as RawReader)
+                    Jayo.buffer1(buffer as RawReader)
                 )
             }
         }
@@ -58,17 +58,17 @@ interface ReaderFactory {
         val REAL_ASYNC_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create0()
+                val buffer = Buffer.create1()
                 return Pipe(
                     buffer,
-                    Jayo.bufferAsync0(buffer as RawReader)
+                    Jayo.bufferAsync1(buffer as RawReader)
                 )
             }
         }
 
         val PEEK_BUFFER: ReaderFactory = object : ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create0()
+                val buffer = Buffer.create1()
                 return Pipe(
                     buffer,
                     buffer.peek()
@@ -79,8 +79,8 @@ interface ReaderFactory {
         val PEEK_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create0()
-                val origin = Jayo.buffer0(buffer as RawReader)
+                val buffer = Buffer.create1()
+                val origin = Jayo.buffer1(buffer as RawReader)
                 return Pipe(
                     buffer,
                     origin.peek()
@@ -91,8 +91,8 @@ interface ReaderFactory {
         val PEEK_ASYNC_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create0()
-                val origin = Jayo.bufferAsync0(buffer as RawReader)
+                val buffer = Buffer.create1()
+                val origin = Jayo.bufferAsync1(buffer as RawReader)
                 return Pipe(
                     buffer,
                     origin.peek()
@@ -103,11 +103,11 @@ interface ReaderFactory {
         val BUFFERED_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create0()
-                val origin = Jayo.buffer0(buffer as RawReader)
+                val buffer = Buffer.create1()
+                val origin = Jayo.buffer1(buffer as RawReader)
                 return Pipe(
                     buffer,
-                    Jayo.buffer0(origin)
+                    Jayo.buffer1(origin)
                 )
             }
         }

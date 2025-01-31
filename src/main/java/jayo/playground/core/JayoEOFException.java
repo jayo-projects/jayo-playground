@@ -21,4 +21,8 @@ public final class JayoEOFException extends JayoException {
     public JayoEOFException(final @NonNull String message) {
         super(Objects.requireNonNull(message), new EOFException(message));
     }
+
+    public JayoEOFException(final @NonNull EOFException cause) {
+        super(Objects.requireNonNull(cause));
+    }
 }

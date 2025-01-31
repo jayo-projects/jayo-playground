@@ -13,7 +13,7 @@ import java.util.concurrent.*
 @Fork(value = 1)
 open class TaskRunnerBenchmark {
     @Param("0", "1", "2", "3", "4", "5")
-    private var schedulerVersion = 0
+    private var taskRunnerVersion = 0
 
     @Param("virtual"/*, "pooled"*/)
     private lateinit var executorType: String
@@ -62,14 +62,14 @@ open class TaskRunnerBenchmark {
         executor = Executors.newVirtualThreadPerTaskExecutor()
 
 
-        taskRunner = when (schedulerVersion) {
+        taskRunner = when (taskRunnerVersion) {
             0 -> TaskRunner.create0(executor)
             1 -> TaskRunner.create1(executor)
             2 -> TaskRunner.create2(executor)
             3 -> TaskRunner.create3(executor)
             4 -> TaskRunner.create4(executor)
             5 -> TaskRunner.create5(executor)
-            else -> throw IllegalStateException("Unknown scheduler version: $schedulerVersion")
+            else -> throw IllegalStateException("Unknown task runner version: $taskRunnerVersion")
         }
 
         latch = CountDownLatch(OPERATIONS_PER_INVOCATION)

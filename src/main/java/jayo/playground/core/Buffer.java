@@ -26,6 +26,7 @@
 package jayo.playground.core;
 
 import jayo.playground.core.impl0.RealBuffer0;
+import jayo.playground.core.impl1.RealBuffer1;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -57,6 +58,13 @@ public interface Buffer extends Reader, Writer, Cloneable {
      */
     static @NonNull Buffer create0() {
         return new RealBuffer0();
+    }
+
+    /**
+     * @return a new {@link Buffer}
+     */
+    static @NonNull Buffer create1() {
+        return new RealBuffer1();
     }
 
     /**

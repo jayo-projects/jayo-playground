@@ -20,4 +20,8 @@ public final class JayoInterruptedIOException extends JayoException {
     public JayoInterruptedIOException(final @NonNull String message) {
         super(Objects.requireNonNull(message), new InterruptedIOException(message));
     }
+
+    public JayoInterruptedIOException(final @NonNull InterruptedIOException cause) {
+        super(Objects.requireNonNull(cause));
+    }
 }
