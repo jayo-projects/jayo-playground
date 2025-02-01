@@ -16,6 +16,10 @@ jspecify = "1.0.0"
 junit = "5.11.4"
 # https://mvnrepository.com/artifact/org.assertj/assertj-core
 assertj = "3.27.2"
+# https://mvnrepository.com/artifact/org.slf4j/slf4j-jdk-platform-logging
+slf4j = "2.0.16"
+# https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
+logback = "1.5.16"
 
 # benchmarks
 # https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core
@@ -28,6 +32,8 @@ jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
 # test
 junit = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+slf4j = { module = "org.slf4j:slf4j-jdk-platform-logging", version.ref = "slf4j" }
+logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

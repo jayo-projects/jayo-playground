@@ -2,7 +2,8 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.github.jengelman.gradle.plugins.shadow.transformers.DontIncludeResourceTransformer
 import com.github.jengelman.gradle.plugins.shadow.transformers.IncludeResourceTransformer
 import org.gradle.api.file.DuplicatesStrategy.WARN
-import kotlin.apply
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 import kotlin.jvm.optionals.getOrNull
 
 val versionCatalog: VersionCatalog = extensions.getByType<VersionCatalogsExtension>().named("libs")
@@ -27,12 +28,19 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.assertj)
+    testRuntimeOnly(libs.slf4j)
+    testRuntimeOnly(libs.logback)
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    testLogging {
+        events = setOf(TestLogEvent.PASSED, TestLogEvent.FAILED, TestLogEvent.SKIPPED)
+        exceptionFormat = TestExceptionFormat.FULL
+        showStandardStreams = true
+    }
 }
 
 jmh {
@@ -41,7 +49,7 @@ jmh {
     jmhVersion = catalogVersion("jmh")
 
 //    includes.set(listOf("""jayo\.playground\.benchmarks\.TaskRunnerBenchmark.*"""))
-    includes.set(listOf("""jayo\.playground\.benchmarks\.BufferUtf8Benchmark.*"""))
+    includes.set(listOf("""jayo\.playground\.benchmarks\.BufferReaderUtf8Benchmark.*"""))
 }
 
 tasks {

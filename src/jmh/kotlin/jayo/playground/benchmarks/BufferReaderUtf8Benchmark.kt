@@ -1,6 +1,8 @@
 package jayo.playground.benchmarks
 
 import jayo.playground.core.Buffer
+import jayo.playground.core.Jayo
+import jayo.playground.core.Reader
 import org.openjdk.jmh.annotations.*
 import java.util.Map
 import java.util.concurrent.TimeUnit
@@ -12,7 +14,7 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = 5, time = 1)
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
-open class BufferUtf8Benchmark {
+open class BufferReaderUtf8Benchmark {
     companion object {
         private val strings = Map.of(
             "ascii",
@@ -59,8 +61,9 @@ open class BufferUtf8Benchmark {
     @Param("ascii", "utf8"/*, "2bytes", "latin1", "3bytes", "4bytes", "bad"*/)
     private lateinit var encoding: String
 
-    private lateinit var jayoBuffer: Buffer
-    private lateinit var encode: String
+    private lateinit var buffer: Buffer
+    private lateinit var reader: Reader
+    private lateinit var text: String
 
     @Setup
     fun setup() {
@@ -72,25 +75,40 @@ open class BufferUtf8Benchmark {
             builder.append(part)
         }
         builder.setLength(length)
-        encode = builder.toString()
+        text = builder.toString()
 
         // Prepare a string and ByteString for encoding and decoding with Okio and Jayo
-        jayoBuffer = when (bufferVersion) {
-            0 -> Buffer.create0()
-            1 -> Buffer.create1()
+        when (bufferVersion) {
+            0 -> {
+                buffer = Buffer.create0()
+                reader = Jayo.bufferAsync0(buffer)
+            }
+            1 -> {
+                buffer = Buffer.create1()
+                reader = Jayo.bufferAsync1(buffer)
+            }
             else -> throw IllegalStateException("Unknown buffer version: $bufferVersion")
         }
     }
 
+    @TearDown
+    fun tearDown() {
+        reader.close()
+        buffer.close()
+    }
+
     @Benchmark
     fun writeUtf8Jayo() {
-        jayoBuffer.write(encode)
-        jayoBuffer.clear()
+        buffer.write(text)
+        buffer.clear()
     }
 
     @Benchmark
     fun readUtf8StringJayo() {
-        jayoBuffer.write(encode)
-        jayoBuffer.readString()
+        buffer.write(text)
+        val read = buffer.readString()
+        if (read != text) {
+            throw AssertionError("read text is not the same as the one that was written")
+        }
     }
 }

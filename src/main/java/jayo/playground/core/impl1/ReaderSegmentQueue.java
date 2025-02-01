@@ -16,7 +16,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static java.lang.System.Logger.Level.DEBUG;
 import static java.lang.System.Logger.Level.TRACE;
 
 sealed class ReaderSegmentQueue extends SegmentQueue permits ReaderSegmentQueue.Async {
@@ -147,8 +146,8 @@ sealed class ReaderSegmentQueue extends SegmentQueue permits ReaderSegmentQueue.
                 if (currentSize >= expectedSize || readerConsumerTerminated) {
                     return currentSize;
                 }
-                if (LOGGER.isLoggable(DEBUG)) {
-                    LOGGER.log(DEBUG, """
+                if (LOGGER.isLoggable(TRACE)) {
+                    LOGGER.log(TRACE, """
                                     AsyncReaderSegmentQueue#{0}: expectSize({1}) pausing expecting more bytes
                                     , current size = {2}
                                     segment queue =
@@ -171,8 +170,8 @@ sealed class ReaderSegmentQueue extends SegmentQueue permits ReaderSegmentQueue.
                     currentSize = size();
                 }
 
-                if (LOGGER.isLoggable(DEBUG)) {
-                    LOGGER.log(DEBUG, "AsyncReaderSegmentQueue#{0}: expectSize({1}) resumed expecting more " +
+                if (LOGGER.isLoggable(TRACE)) {
+                    LOGGER.log(TRACE, "AsyncReaderSegmentQueue#{0}: expectSize({1}) resumed expecting more " +
                                     "bytes, current size = {2}{3}",
                             hashCode(), expectedSize, currentSize, System.lineSeparator());
                 }
@@ -217,8 +216,8 @@ sealed class ReaderSegmentQueue extends SegmentQueue permits ReaderSegmentQueue.
         private final class ReaderConsumer implements Runnable {
             @Override
             public void run() {
-                if (LOGGER.isLoggable(DEBUG)) {
-                    LOGGER.log(DEBUG, "AsyncReaderSegmentQueue#{0}:ReaderConsumer Runnable task: start",
+                if (LOGGER.isLoggable(TRACE)) {
+                    LOGGER.log(TRACE, "AsyncReaderSegmentQueue#{0}:ReaderConsumer Runnable task: start",
                             hashCode());
                 }
                 try {
@@ -238,16 +237,16 @@ sealed class ReaderSegmentQueue extends SegmentQueue permits ReaderSegmentQueue.
                             try {
                                 final var currentSize = size();
                                 if (!readSuccess || currentSize >= MAX_BYTE_SIZE) {
-                                    if (LOGGER.isLoggable(DEBUG)) {
+                                    if (LOGGER.isLoggable(TRACE)) {
                                         if (!readSuccess) {
-                                            LOGGER.log(DEBUG,
+                                            LOGGER.log(TRACE,
                                                     "AsyncReaderSegmentQueue#{0}:ReaderConsumer Runnable task:" +
                                                             " last read did not return any result, expected size = " +
                                                             "{1}, current size = {2} pausing consumer thread{3}",
                                                     hashCode(), currentExpectedSize, currentSize,
                                                     System.lineSeparator());
                                         } else {
-                                            LOGGER.log(DEBUG,
+                                            LOGGER.log(TRACE,
                                                     "AsyncReaderSegmentQueue#{0}:ReaderConsumer Runnable task:" +
                                                             " buffer reached or exceeded max capacity: {1}/{2}," +
                                                             " pausing consumer thread{3}",
@@ -291,16 +290,16 @@ sealed class ReaderSegmentQueue extends SegmentQueue permits ReaderSegmentQueue.
                         lock.unlock();
                     }
                 }
-                if (LOGGER.isLoggable(DEBUG)) {
-                    LOGGER.log(DEBUG, "AsyncReaderSegmentQueue#{0}: ReaderConsumer Runnable task: end",
+                if (LOGGER.isLoggable(TRACE)) {
+                    LOGGER.log(TRACE, "AsyncReaderSegmentQueue#{0}: ReaderConsumer Runnable task: end",
                             hashCode());
                 }
             }
 
             private void resumeExpectingSize() {
                 assert lock.isHeldByCurrentThread();
-                if (LOGGER.isLoggable(DEBUG)) {
-                    LOGGER.log(DEBUG, "AsyncReaderSegmentQueue#{0}: resumeExpectingSize()", hashCode());
+                if (LOGGER.isLoggable(TRACE)) {
+                    LOGGER.log(TRACE, "AsyncReaderSegmentQueue#{0}: resumeExpectingSize()", hashCode());
                 }
                 expectingSize.signal();
             }
