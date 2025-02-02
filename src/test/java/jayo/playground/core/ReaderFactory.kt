@@ -25,6 +25,9 @@
 
 package jayo.playground.core
 
+import jayo.playground.core.JavaVersionUtils.executorService
+import jayo.playground.scheduling.TaskRunner
+
 interface ReaderFactory {
     class Pipe(
         var writer: Buffer,
@@ -34,9 +37,11 @@ interface ReaderFactory {
     fun pipe(): Pipe
 
     companion object {
+        val TASK_RUNNER: TaskRunner = TaskRunner.create5(executorService())
+
         val BUFFER: ReaderFactory = object : ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create1()
+                val buffer = Buffer.create2()
                 return Pipe(
                     buffer,
                     buffer
@@ -47,10 +52,10 @@ interface ReaderFactory {
         val REAL_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create1()
+                val buffer = Buffer.create2()
                 return Pipe(
                     buffer,
-                    Jayo.buffer1(buffer as RawReader)
+                    Jayo.buffer2(buffer as RawReader)
                 )
             }
         }
@@ -58,17 +63,17 @@ interface ReaderFactory {
         val REAL_ASYNC_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create1()
+                val buffer = Buffer.create2()
                 return Pipe(
                     buffer,
-                    Jayo.bufferAsync1(buffer as RawReader)
+                    Jayo.bufferAsync2(buffer as RawReader, TASK_RUNNER)
                 )
             }
         }
 
         val PEEK_BUFFER: ReaderFactory = object : ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create1()
+                val buffer = Buffer.create2()
                 return Pipe(
                     buffer,
                     buffer.peek()
@@ -79,8 +84,8 @@ interface ReaderFactory {
         val PEEK_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create1()
-                val origin = Jayo.buffer1(buffer as RawReader)
+                val buffer = Buffer.create2()
+                val origin = Jayo.buffer2(buffer as RawReader)
                 return Pipe(
                     buffer,
                     origin.peek()
@@ -91,8 +96,8 @@ interface ReaderFactory {
         val PEEK_ASYNC_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create1()
-                val origin = Jayo.bufferAsync1(buffer as RawReader)
+                val buffer = Buffer.create2()
+                val origin = Jayo.bufferAsync2(buffer as RawReader, TASK_RUNNER)
                 return Pipe(
                     buffer,
                     origin.peek()
@@ -103,11 +108,11 @@ interface ReaderFactory {
         val BUFFERED_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create1()
-                val origin = Jayo.buffer1(buffer as RawReader)
+                val buffer = Buffer.create2()
+                val origin = Jayo.buffer2(buffer as RawReader)
                 return Pipe(
                     buffer,
-                    Jayo.buffer1(origin)
+                    Jayo.buffer2(origin)
                 )
             }
         }

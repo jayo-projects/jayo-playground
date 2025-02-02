@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package jayo.playground.core.impl1;
+package jayo.playground.core.impl2;
 
 import jayo.playground.core.Buffer;
 import jayo.playground.core.JayoEOFException;
@@ -33,22 +33,22 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import static java.lang.System.Logger.Level.TRACE;
-import static jayo.playground.core.impl1.Segment.TRANSFERRING;
-import static jayo.playground.core.impl1.Segment.WRITING;
-import static jayo.playground.core.impl1.Utils.HEX_DIGIT_CHARS;
-import static jayo.playground.core.impl1.Utils.checkOffsetAndCount;
+import static jayo.playground.core.impl2.Segment.TRANSFERRING;
+import static jayo.playground.core.impl2.Segment.WRITING;
+import static jayo.playground.core.impl2.Utils.HEX_DIGIT_CHARS;
+import static jayo.playground.core.impl2.Utils.checkOffsetAndCount;
 
 
-public final class RealBuffer1 implements Buffer {
+public final class RealBuffer2 implements Buffer {
     private static final System.Logger LOGGER = System.getLogger("jayo.Buffer");
 
     final @NonNull SegmentQueue segmentQueue;
 
-    public RealBuffer1() {
+    public RealBuffer2() {
         this(new SegmentQueue());
     }
 
-    RealBuffer1(final @NonNull SegmentQueue segmentQueue) {
+    RealBuffer2(final @NonNull SegmentQueue segmentQueue) {
         this.segmentQueue = Objects.requireNonNull(segmentQueue);
     }
 
@@ -58,7 +58,7 @@ public final class RealBuffer1 implements Buffer {
                                   final long byteCount) {
         Objects.requireNonNull(out);
         checkOffsetAndCount(bytesAvailable(), offset, byteCount);
-        if (!(out instanceof RealBuffer1 _out)) {
+        if (!(out instanceof RealBuffer2 _out)) {
             throw new IllegalArgumentException("out must be an instance of RealBuffer");
         }
         if (byteCount == 0L) {
@@ -105,7 +105,7 @@ public final class RealBuffer1 implements Buffer {
 
     @Override
     public @NonNull Reader peek() {
-        return new RealReader1(new PeekRawReader(this));
+        return new RealReader2(new PeekRawReader(this));
     }
 
     @Override
@@ -347,7 +347,7 @@ public final class RealBuffer1 implements Buffer {
         if (byteCount == 0L) {
             return;
         }
-        if (!(reader instanceof RealBuffer1 _reader)) {
+        if (!(reader instanceof RealBuffer2 _reader)) {
             throw new IllegalArgumentException("reader must be an instance of RealBuffer");
         }
 
@@ -486,7 +486,7 @@ public final class RealBuffer1 implements Buffer {
         }
     }
 
-    private boolean tryTransferBytes(Segment tail, Segment readerHead, RealBuffer1 reader, long byteCount) {
+    private boolean tryTransferBytes(Segment tail, Segment readerHead, RealBuffer2 reader, long byteCount) {
         if (tail != null && tail.owner &&
                 byteCount + tail.limit - ((tail.isShared()) ? 0 : tail.pos) <= Segment.SIZE) {
             try {

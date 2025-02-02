@@ -25,6 +25,9 @@ import jayo.playground.core.impl0.InputStreamRawReader0;
 import jayo.playground.core.impl0.RealReader0;
 import jayo.playground.core.impl1.InputStreamRawReader1;
 import jayo.playground.core.impl1.RealReader1;
+import jayo.playground.core.impl2.InputStreamRawReader2;
+import jayo.playground.core.impl2.RealReader2;
+import jayo.playground.scheduling.TaskRunner;
 import org.jspecify.annotations.NonNull;
 
 import java.io.InputStream;
@@ -102,5 +105,41 @@ public final class Jayo {
     public static @NonNull RawReader reader1(final @NonNull InputStream in) {
         Objects.requireNonNull(in);
         return new InputStreamRawReader1(in);
+    }
+
+    /**
+     * @return a new reader that buffers reads from the raw {@code reader}. The returned reader will perform bulk reads
+     * into its underlying buffer.
+     * <p>
+     * Read operations from the raw {@code reader} are processed <b>synchronously</b>.
+     * <p>
+     * Use this wherever you synchronously read from a raw reader to get an ergonomic and efficient access to data.
+     */
+    public static @NonNull Reader buffer2(final @NonNull RawReader reader) {
+        Objects.requireNonNull(reader);
+        return new RealReader2(reader, null);
+    }
+
+    /**
+     * @return a new reader that buffers reads from the raw {@code reader}. The returned reader will perform bulk reads
+     * into its underlying buffer.
+     * <p>
+     * Read operations from the raw {@code reader} are seamlessly processed <b>asynchronously</b> by a virtual
+     * thread.
+     * <p>
+     * Use this wherever you asynchronously read from a raw reader to get an ergonomic and efficient access to data.
+     */
+    public static @NonNull Reader bufferAsync2(final @NonNull RawReader reader, final @NonNull TaskRunner taskRunner) {
+        Objects.requireNonNull(reader);
+        Objects.requireNonNull(taskRunner);
+        return new RealReader2(reader, taskRunner);
+    }
+
+    /**
+     * @return a raw reader that reads from {@code in} stream.
+     */
+    public static @NonNull RawReader reader2(final @NonNull InputStream in) {
+        Objects.requireNonNull(in);
+        return new InputStreamRawReader2(in);
     }
 }

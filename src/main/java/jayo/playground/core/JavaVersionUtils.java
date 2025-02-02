@@ -7,6 +7,8 @@ package jayo.playground.core;
 
 import org.jspecify.annotations.NonNull;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 import static java.lang.System.Logger.Level.INFO;
@@ -34,5 +36,13 @@ public final class JavaVersionUtils {
                 .name(prefix, 0)
                 .inheritInheritableThreadLocals(true)
                 .factory();
+    }
+
+    /**
+     * Java 21 has Virtual Thread support, so we use them through
+     * {@link Executors#newThreadPerTaskExecutor(ThreadFactory)} with our {@link #threadFactory(String)}
+     */
+    public static @NonNull ExecutorService executorService() {
+        return Executors.newThreadPerTaskExecutor(threadFactory("JayoTaskRunnerThread-"));
     }
 }
