@@ -17,6 +17,15 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class BufferReaderUtf8Benchmark {
+    @Param("0", "1", "2")
+    private var bufferVersion = 0
+
+    @Param("20", "2000", "200000")
+    private var length = 0
+
+    @Param("ascii", "utf8"/*, "2bytes", "latin1", "3bytes", "4bytes", "bad"*/)
+    private lateinit var encoding: String
+
     companion object {
         private val strings = Map.of(
             "ascii",
@@ -56,15 +65,6 @@ open class BufferReaderUtf8Benchmark {
         val TASK_RUNNER: TaskRunner = TaskRunner.create5(executorService())
     }
 
-    @Param(/*"0", */"1", "2")
-    private var bufferVersion = 0
-
-    @Param("20", "2000", "200000")
-    private var length = 0
-
-    @Param("ascii", "utf8"/*, "2bytes", "latin1", "3bytes", "4bytes", "bad"*/)
-    private lateinit var encoding: String
-
     private lateinit var buffer: Buffer
     private lateinit var reader: Reader
     private lateinit var text: String
@@ -87,14 +87,17 @@ open class BufferReaderUtf8Benchmark {
                 buffer = Buffer.create0()
                 reader = Jayo.bufferAsync0(buffer)
             }
+
             1 -> {
                 buffer = Buffer.create1()
                 reader = Jayo.bufferAsync1(buffer)
             }
+
             2 -> {
                 buffer = Buffer.create2()
                 reader = Jayo.bufferAsync2(buffer, TASK_RUNNER)
             }
+
             else -> throw IllegalStateException("Unknown buffer version: $bufferVersion")
         }
     }
@@ -105,18 +108,16 @@ open class BufferReaderUtf8Benchmark {
         buffer.close()
     }
 
-//    @Benchmark
-//    fun writeUtf8Jayo() {
-//        buffer.write(text)
-//        buffer.clear()
-//    }
+    @Benchmark
+    fun writeUtf8Jayo() {
+        buffer.write(text)
+        buffer.clear()
+    }
 
     @Benchmark
     fun readUtf8StringJayo() {
         buffer.write(text)
         val read = buffer.readString()
-        if (read != text) {
-            throw AssertionError("read text is not the same as the one that was written")
-        }
+        check(read.contentEquals(text))
     }
 }

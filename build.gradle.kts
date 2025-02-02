@@ -49,7 +49,8 @@ jmh {
     jmhVersion = catalogVersion("jmh")
 
 //    includes.set(listOf("""jayo\.playground\.benchmarks\.TaskRunnerBenchmark.*"""))
-    includes.set(listOf("""jayo\.playground\.benchmarks\.BufferReaderUtf8Benchmark.*"""))
+//    includes.set(listOf("""jayo\.playground\.benchmarks\.BufferReaderUtf8Benchmark.*"""))
+    includes.set(listOf("""jayo\.playground\.benchmarks\.SlowReaderBenchmark.*"""))
 }
 
 tasks {
