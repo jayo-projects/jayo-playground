@@ -197,7 +197,7 @@ sealed class ReaderSegmentQueue extends SegmentQueue permits ReaderSegmentQueue.
             };
         }
 
-
+        @Override
         long size() {
             throwIfNeeded();
             return super.size();
@@ -212,7 +212,7 @@ sealed class ReaderSegmentQueue extends SegmentQueue permits ReaderSegmentQueue.
             }
         }
 
-
+        @Override
         long expectSize(final long expectedSize) {
             assert expectedSize > 0L;
             // fast-path : current size is enough
@@ -244,17 +244,8 @@ sealed class ReaderSegmentQueue extends SegmentQueue permits ReaderSegmentQueue.
                     taskRunner.execute(false, readerConsumer);
                 }
                 expectingSize.await();
-//                // consumer thread may have not read all data, continue here in current thread
-//                final var stillExpectingSize = this.expectedSize;
-//                if (stillExpectingSize > 0) {
-//                    this.expectedSize = 0L;
-//                    currentSize = super.expectSize(stillExpectingSize);
-//                    // resume reader consumer thread to continue reading asynchronously
-//                    readerConsumerPaused.signal();
-//                } else {
-                currentSize = size();
-//                }
 
+                currentSize = size();
                 if (LOGGER.isLoggable(TRACE)) {
                     LOGGER.log(TRACE, "AsyncReaderSegmentQueue#{0}: expectSize({1}) resumed expecting more " +
                                     "bytes, current size = {2}{3}",
