@@ -28,11 +28,12 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.assertj)
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testRuntimeOnly(libs.slf4j)
     testRuntimeOnly(libs.logback)
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(24)
 
 tasks.withType<Test> {
     useJUnitPlatform()
@@ -75,6 +76,6 @@ tasks {
 // when version changes :
 // -> execute ./gradlew wrapper, then remove .gradle directory, then execute ./gradlew wrapper again
 tasks.wrapper {
-    gradleVersion = "8.12.1"
+    gradleVersion = "8.14.1"
     distributionType = Wrapper.DistributionType.ALL
 }
