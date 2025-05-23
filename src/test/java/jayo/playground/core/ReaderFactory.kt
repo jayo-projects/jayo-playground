@@ -41,7 +41,7 @@ interface ReaderFactory {
 
         val BUFFER: ReaderFactory = object : ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create2()
+                val buffer = Buffer.create3()
                 return Pipe(
                     buffer,
                     buffer
@@ -52,10 +52,10 @@ interface ReaderFactory {
         val REAL_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create2()
+                val buffer = Buffer.create3()
                 return Pipe(
                     buffer,
-                    Jayo.buffer2(buffer as RawReader)
+                    Jayo.buffer3(buffer as RawReader)
                 )
             }
         }
@@ -73,7 +73,7 @@ interface ReaderFactory {
 
         val PEEK_BUFFER: ReaderFactory = object : ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create2()
+                val buffer = Buffer.create3()
                 return Pipe(
                     buffer,
                     buffer.peek()
@@ -84,8 +84,8 @@ interface ReaderFactory {
         val PEEK_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create2()
-                val origin = Jayo.buffer2(buffer as RawReader)
+                val buffer = Buffer.create3()
+                val origin = Jayo.buffer3(buffer as RawReader)
                 return Pipe(
                     buffer,
                     origin.peek()
@@ -108,11 +108,11 @@ interface ReaderFactory {
         val BUFFERED_SOURCE: ReaderFactory = object :
             ReaderFactory {
             override fun pipe(): Pipe {
-                val buffer = Buffer.create2()
-                val origin = Jayo.buffer2(buffer as RawReader)
+                val buffer = Buffer.create3()
+                val origin = Jayo.buffer3(buffer as RawReader)
                 return Pipe(
                     buffer,
-                    Jayo.buffer2(origin)
+                    Jayo.buffer3(origin)
                 )
             }
         }

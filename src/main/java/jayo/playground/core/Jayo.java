@@ -27,10 +27,13 @@ import jayo.playground.core.impl1.InputStreamRawReader1;
 import jayo.playground.core.impl1.RealReader1;
 import jayo.playground.core.impl2.InputStreamRawReader2;
 import jayo.playground.core.impl2.RealReader2;
+import jayo.playground.core.impl3.ReadableByteChannelRawReader3;
+import jayo.playground.core.impl3.RealReader3;
 import jayo.playground.scheduling.TaskRunner;
 import org.jspecify.annotations.NonNull;
 
 import java.io.InputStream;
+import java.nio.channels.ReadableByteChannel;
 import java.util.Objects;
 
 /**
@@ -141,5 +144,26 @@ public final class Jayo {
     public static @NonNull RawReader reader2(final @NonNull InputStream in) {
         Objects.requireNonNull(in);
         return new InputStreamRawReader2(in);
+    }
+
+    /**
+     * @return a new reader that buffers reads from the raw {@code reader}. The returned reader will perform bulk reads
+     * into its underlying buffer.
+     * <p>
+     * Read operations from the raw {@code reader} are processed <b>synchronously</b>.
+     * <p>
+     * Use this wherever you synchronously read from a raw reader to get an ergonomic and efficient access to data.
+     */
+    public static @NonNull Reader buffer3(final @NonNull RawReader reader) {
+        Objects.requireNonNull(reader);
+        return new RealReader3(reader);
+    }
+
+    /**
+     * @return a raw reader that reads from {@code in} readable byte channel.
+     */
+    public static @NonNull RawReader reader3(final @NonNull ReadableByteChannel in) {
+        Objects.requireNonNull(in);
+        return new ReadableByteChannelRawReader3(in);
     }
 }

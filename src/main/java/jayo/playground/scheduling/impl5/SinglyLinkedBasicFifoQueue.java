@@ -21,6 +21,14 @@ public final class SinglyLinkedBasicFifoQueue<T> implements BasicFifoQueue<T> {
         private Node(final @NonNull T value) {
             this.value = value;
         }
+
+        @Override
+        public String toString() {
+            return "Node{" +
+                    "value=" + value +
+                    ", next=" + next +
+                    '}';
+        }
     }
 
     private @Nullable Node<T> head = null;
@@ -46,6 +54,11 @@ public final class SinglyLinkedBasicFifoQueue<T> implements BasicFifoQueue<T> {
     }
 
     @Override
+    public T peekLast() {
+        return tail != null ? tail.value : null;
+    }
+
+    @Override
     public T poll() {
         // queue was empty
         if (head == null) {
@@ -55,16 +68,15 @@ public final class SinglyLinkedBasicFifoQueue<T> implements BasicFifoQueue<T> {
         if (head == tail) {
             tail = null;
         }
-        final var value = head.value;
         final var removed = head;
         head = head.next;
         removed.next = null;
-        return value;
+        return (head != null) ? head.value : null;
     }
 
     @Override
     public boolean isEmpty() {
-        return head == null;
+        return head == null && tail == null;
     }
 
     @Override
@@ -87,6 +99,9 @@ public final class SinglyLinkedBasicFifoQueue<T> implements BasicFifoQueue<T> {
         var node = head;
         if (node.value.equals(o)) {
             head = node.next;
+            if (tail == node) {
+                tail = null;
+            }
             return true;
         }
 
@@ -155,5 +170,13 @@ public final class SinglyLinkedBasicFifoQueue<T> implements BasicFifoQueue<T> {
             current = previous;
             canRemove = false;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "SinglyLinkedBasicFifoQueue{" +
+                "head=" + head +
+                ", tail=" + tail +
+                '}';
     }
 }

@@ -59,7 +59,6 @@ class BasicFifoQueueTest {
         queue.offer("1")
         queue.offer("2")
 
-        assertThat(queue.poll()).isEqualTo("1")
         assertThat(queue.poll()).isEqualTo("2")
         assertThat(queue.poll()).isNull()
     }
@@ -78,7 +77,7 @@ class BasicFifoQueueTest {
         assertThat(queue.remove(4)).isTrue
         assertThat(queue.remove(3)).isTrue
 
-        var iterator = queue.iterator()
+        val iterator = queue.iterator()
         assertThat(iterator.next()).isEqualTo(2)
         assertThat(iterator.hasNext()).isFalse
     }
@@ -130,12 +129,12 @@ class BasicFifoQueueTest {
         assertThat(queue.remove(2)).isTrue
         assertThat(queue.offer(4)).isFalse
         assertThat(queue.peek()).isEqualTo(1)
-        assertThat(queue.poll()).isEqualTo(1)
-        assertThat(queue.peek()).isEqualTo(3)
         assertThat(queue.poll()).isEqualTo(3)
+        assertThat(queue.peek()).isEqualTo(3)
+        assertThat(queue.poll()).isEqualTo(4)
         assertThat(queue.offer(5)).isFalse
         assertThat(queue.remove(4)).isTrue
-        assertThat(queue.poll()).isEqualTo(5)
+        assertThat(queue.poll()).isNull()
         assertThat(queue.isEmpty()).isTrue
         assertThat(queue.offer(6)).isTrue
     }
@@ -145,7 +144,7 @@ class BasicFifoQueueTest {
         val queue = BasicFifoQueue.create<String>()
         queue.offer("1")
 
-        var iterator = queue.iterator()
+        val iterator = queue.iterator()
         assertThat(iterator.hasNext()).isTrue
         assertThat(iterator.next()).isEqualTo("1")
         iterator.remove()

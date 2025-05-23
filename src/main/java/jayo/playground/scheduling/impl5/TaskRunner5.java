@@ -187,20 +187,22 @@ public final class TaskRunner5 implements TaskRunner {
 
         final var queue = task.queue;
         if (queue != null) {
-            final var removedTask = queue.futureTasks.poll();
+            final var removedTask = queue.futureTasks.peek();
             if (task != removedTask || queue.scheduledTask != task) {
                 throw new IllegalStateException("removedTask " + removedTask + " or queue.scheduledTask " +
                         queue.scheduledTask + " != task " + task);
             }
+            queue.futureTasks.poll();
             queue.activeTask = task;
         }
 
         switch (task) {
             case Task5.RunnableTask runnableTask -> {
-                if (futureTasks.poll() != runnableTask) {
+                if (futureTasks.peek() != runnableTask) {
                     throw new IllegalStateException();
                 }
-                // Also start another thread if there's more work or scheduling to do.
+                futureTasks.poll();
+                // Also, start another thread if there's more work or scheduling to do.
                 if (!futureTasks.isEmpty()) {
                     startAnotherThread();
                 }

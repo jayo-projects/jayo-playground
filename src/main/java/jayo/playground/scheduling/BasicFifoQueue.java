@@ -19,11 +19,12 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
- * A basic FIFO queue that only supports {@link #offer(Object)}, {@link #poll()}, {@link #isEmpty()} and
- * {@link #iterator()}. All other methods throw {@code UnsupportedOperationException}.
+ * A basic FIFO queue that only implements {@link #offer(Object)}, {@link #poll()}, {@link #isEmpty()} and
+ * {@link #iterator()} of {@linkplain Queue j.u.Queue}. All other methods throw {@code UnsupportedOperationException}.
+ * This interface also adds the single additional {@link #peekLast()} method.
  * <p>
- * <b>Be careful</b>, the returned boolean of our {@link #offer(Object)} method does not respect the
- * {@link Queue#offer(Object)} rationale, it has been adapted to our need. Read its javadoc for details.
+ * <b>Be careful</b>, our {@link #offer(Object)} and {@link #poll()} methods do not respect the {@link Queue} rationale,
+ * they have been adapted to our need. Read its javadoc for details.
  */
 public interface BasicFifoQueue<T> extends Queue<T> {
     static <T> BasicFifoQueue<T> create() {
@@ -33,18 +34,31 @@ public interface BasicFifoQueue<T> extends Queue<T> {
     /**
      * Inserts the specified element into this queue.
      *
-     * @return true if element is alone in this queue, meaning this queue was empty before that.
+     * @return true if the item is alone in this queue, meaning this queue was empty before that.
      * @apiNote This operation's result differs from the {@link Queue#offer(Object)} rationale. Our offer operation
-     * always succeed.
+     * always succeeds.
      */
     @Override
     boolean offer(final @NonNull T item);
 
     @Override
-    T peek();
+    @Nullable T peek();
 
+    /**
+     * Retrieves, but does not remove, the last element of this queue, or returns {@code null} if this queue is empty.
+     *
+     * @return the tail of this queue, or {@code null} if this queue is empty
+     */
+    @Nullable T peekLast();
+
+    /**
+     * Removes the first element of this queue and returns its successor.
+     * @return the new head of this queue, or {@code null} if this queue is now empty.
+     * @apiNote This operation's result differs from the {@link Queue#poll()} rationale. We return the new head instead
+     * of the previous one that was removed.
+     */
     @Override
-    T poll();
+    @Nullable T poll();
 
     @Override
     boolean isEmpty();

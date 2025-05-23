@@ -63,8 +63,8 @@ final class PeekRawReader implements RawReader {
     }
 
     @Override
-    public long readAtMostTo(final @NonNull Buffer writer, final long byteCount) {
-        Objects.requireNonNull(writer);
+    public long readAtMostTo(final @NonNull Buffer destination, final long byteCount) {
+        Objects.requireNonNull(destination);
         if (byteCount < 0L) {
             throw new IllegalArgumentException("byteCount < 0 : " + byteCount);
         }
@@ -100,7 +100,7 @@ final class PeekRawReader implements RawReader {
         if ((pos | toCopy) < 0) {
             throw new IllegalStateException("Peek reader is invalid because upstream reader was used");
         }
-        buffer.copyTo(writer, pos, toCopy);
+        buffer.copyTo(destination, pos, toCopy);
         pos += toCopy;
         return toCopy;
     }

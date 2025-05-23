@@ -48,12 +48,12 @@ public final class InputStreamRawReader1 implements RawReader {
      * @return the number of bytes actually read.
      */
     @Override
-    public long readAtMostTo(final @NonNull Buffer writer, final long byteCount) {
-        Objects.requireNonNull(writer);
+    public long readAtMostTo(final @NonNull Buffer destination, final long byteCount) {
+        Objects.requireNonNull(destination);
         if (byteCount < 0L) {
             throw new IllegalArgumentException("byteCount < 0 : " + byteCount);
         }
-        if (!(writer instanceof RealBuffer1 _writer)) {
+        if (!(destination instanceof RealBuffer1 _writer)) {
             throw new IllegalArgumentException("writer must be an instance of RealBuffer");
         }
 

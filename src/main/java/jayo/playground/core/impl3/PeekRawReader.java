@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package jayo.playground.core.impl0;
+package jayo.playground.core.impl3;
 
 import jayo.playground.core.Buffer;
 import jayo.playground.core.RawReader;
@@ -29,7 +29,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
-import static jayo.playground.core.impl0.Utils.getBufferFromReader;
+import static jayo.playground.core.impl3.Utils.getBufferFromReader;
 
 /**
  * A {@link RawReader} which peeks into an upstream {@link Reader} and allows reading and expanding of the buffered data
@@ -42,20 +42,19 @@ import static jayo.playground.core.impl0.Utils.getBufferFromReader;
  */
 final class PeekRawReader implements RawReader {
     private final @NonNull Reader upstream;
-    private final @NonNull RealBuffer0 buffer;
+    private final @NonNull RealBuffer3 buffer;
     private @Nullable Segment expectedSegment;
     private int expectedPos;
     private boolean closed = false;
-    private  long pos = 0L;
+    private long pos = 0L;
 
     public PeekRawReader(final @NonNull Reader upstream) {
         this.upstream = Objects.requireNonNull(upstream);
-        buffer = (RealBuffer0) getBufferFromReader(upstream);
-        buffer.segmentQueue.expectSize(1L);
-        final var bufferHead = buffer.segmentQueue.head();
+        buffer = getBufferFromReader(upstream);
+        final var bufferHead = buffer.segmentQueue.peek();
         if (bufferHead != null) {
             this.expectedSegment = bufferHead;
-            this.expectedPos = bufferHead.pos;
+            this.expectedPos = bufferHead.byteBuffer.position();
         } else {
             this.expectedSegment = null;
             this.expectedPos = -1;
@@ -63,7 +62,7 @@ final class PeekRawReader implements RawReader {
     }
 
     @Override
-    public long readAtMostTo(final @NonNull Buffer destination, final  long byteCount) {
+    public long readAtMostTo(final @NonNull Buffer destination, final long byteCount) {
         Objects.requireNonNull(destination);
         if (byteCount < 0L) {
             throw new IllegalArgumentException("byteCount < 0 : " + byteCount);
@@ -72,13 +71,13 @@ final class PeekRawReader implements RawReader {
             throw new IllegalStateException("this peek reader is closed");
         }
 
-        final var bufferHead = buffer.segmentQueue.head();
+        final var bufferHead = buffer.segmentQueue.peek();
         // Reader becomes invalid if there is an expected Segment and it and the expected position does not match the
         // current head and head position of the upstream buffer
         if (expectedSegment != null &&
                 (bufferHead == null
                         || expectedSegment != bufferHead
-                        || expectedPos != bufferHead.pos)) {
+                        || expectedPos != bufferHead.byteBuffer.position())) {
             throw new IllegalStateException("Peek reader is invalid because upstream reader was used");
         }
         if (byteCount == 0L) {
@@ -89,11 +88,11 @@ final class PeekRawReader implements RawReader {
         }
 
         if (expectedSegment == null && bufferHead != null) {
-            // Only once the buffer actually holds data should an expected Segment and position be recorded.
+            // Only once the buffer actually holds data, should an expected Segment and position be recorded.
             // This allows reads from the peek reader to repeatedly return -1 and for data to be added later.
             // Unit tests depend on this behavior.
             expectedSegment = bufferHead;
-            expectedPos = bufferHead.pos;
+            expectedPos = bufferHead.byteBuffer.position();
         }
 
         final var toCopy = Math.min(byteCount, buffer.bytesAvailable() - pos);

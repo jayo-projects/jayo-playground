@@ -67,4 +67,15 @@ public interface Writer extends RawWriter {
     Writer write(final @NonNull CharSequence charSequence,
                  final int startIndex,
                  final int endIndex);
+
+    /**
+     * Removes all bytes from {@code source} and writes them to this sink.
+     *
+     * @param source the source to consume data from.
+     * @return the number of bytes read, which will be 0L if {@code source} is exhausted.
+     * @throws IllegalStateException if this sink or the {@code source} is closed.
+     */
+    default long transferFrom(final @NonNull RawReader source) {
+        throw new UnsupportedOperationException("transferFrom is not supported");
+    }
 }

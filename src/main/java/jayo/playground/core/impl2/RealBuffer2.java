@@ -294,7 +294,7 @@ public final class RealBuffer2 implements Buffer {
     }
 
     @Override
-    public void write(final @NonNull Buffer reader, final long byteCount) {
+    public void write(final @NonNull Buffer source, final long byteCount) {
         // Move bytes from the head of the reader buffer to the tail of this buffer in the most possible effective way !
         // This method is the most crucial part of the Jayo concept based on Buffer = a queue of segments.
         //
@@ -340,14 +340,14 @@ public final class RealBuffer2 implements Buffer {
         // an equivalent buffer [30%, 62%, 82%] and then move the head segment, yielding writer [51%, 91%, 30%] and reader
         // [62%, 82%].
 
-        if (Objects.requireNonNull(reader) == this) {
+        if (Objects.requireNonNull(source) == this) {
             throw new IllegalArgumentException("reader == this, cannot write in itself");
         }
-        checkOffsetAndCount(reader.bytesAvailable(), 0, byteCount);
+        checkOffsetAndCount(source.bytesAvailable(), 0, byteCount);
         if (byteCount == 0L) {
             return;
         }
-        if (!(reader instanceof RealBuffer2 _reader)) {
+        if (!(source instanceof RealBuffer2 _reader)) {
             throw new IllegalArgumentException("reader must be an instance of RealBuffer");
         }
 
@@ -542,8 +542,8 @@ public final class RealBuffer2 implements Buffer {
     }
 
     @Override
-    public long readAtMostTo(final @NonNull Buffer writer, final long byteCount) {
-        Objects.requireNonNull(writer);
+    public long readAtMostTo(final @NonNull Buffer destination, final long byteCount) {
+        Objects.requireNonNull(destination);
         if (byteCount < 0L) {
             throw new IllegalArgumentException("byteCount < 0: " + byteCount);
         }
@@ -552,7 +552,7 @@ public final class RealBuffer2 implements Buffer {
             return -1L;
         }
         var _byteCount = Math.min(byteCount, size);
-        writer.write(this, _byteCount);
+        destination.write(this, _byteCount);
         return _byteCount;
     }
 

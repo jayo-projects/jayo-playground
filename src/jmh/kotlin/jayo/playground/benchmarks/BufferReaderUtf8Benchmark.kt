@@ -1,10 +1,6 @@
 package jayo.playground.benchmarks
 
 import jayo.playground.core.Buffer
-import jayo.playground.core.JavaVersionUtils.executorService
-import jayo.playground.core.Jayo
-import jayo.playground.core.Reader
-import jayo.playground.scheduling.TaskRunner
 import org.openjdk.jmh.annotations.*
 import java.util.Map
 import java.util.concurrent.TimeUnit
@@ -17,7 +13,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class BufferReaderUtf8Benchmark {
-    @Param("0", "1", "2")
+    @Param(/*"0", "1",*/ "2", "3")
     private var bufferVersion = 0
 
     @Param("20", "2000", "200000")
@@ -61,12 +57,9 @@ open class BufferReaderUtf8Benchmark {
             "bad",
             "\ud800\u0061\udc00\u0061"
         )
-
-        val TASK_RUNNER: TaskRunner = TaskRunner.create5(executorService())
     }
 
     private lateinit var buffer: Buffer
-    private lateinit var reader: Reader
     private lateinit var text: String
 
     @Setup
@@ -85,27 +78,22 @@ open class BufferReaderUtf8Benchmark {
         when (bufferVersion) {
             0 -> {
                 buffer = Buffer.create0()
-                reader = Jayo.bufferAsync0(buffer)
             }
 
             1 -> {
                 buffer = Buffer.create1()
-                reader = Jayo.bufferAsync1(buffer)
             }
 
             2 -> {
                 buffer = Buffer.create2()
-                reader = Jayo.bufferAsync2(buffer, TASK_RUNNER)
+            }
+
+            3 -> {
+                buffer = Buffer.create3()
             }
 
             else -> throw IllegalStateException("Unknown buffer version: $bufferVersion")
         }
-    }
-
-    @TearDown
-    fun tearDown() {
-        reader.close()
-        buffer.close()
     }
 
     @Benchmark

@@ -41,13 +41,13 @@ public interface RawWriter extends Closeable, Flushable {
     /**
      * Removes {@code byteCount} bytes from {@code reader} and appends them to this writer.
      *
-     * @param reader    the reader to read data from.
+     * @param source    the reader to read data from.
      * @param byteCount the number of bytes to write.
      * @throws IndexOutOfBoundsException   if the {@code reader}'s size is below {@code byteCount} or {@code byteCount}
      *                                     is negative.
      * @throws JayoException               if an I/O error occurs.
      */
-    void write(final @NonNull Buffer reader, final long byteCount);
+    void write(final @NonNull Buffer source, final long byteCount);
 
     /**
      * Pushes all buffered bytes to their final destination.

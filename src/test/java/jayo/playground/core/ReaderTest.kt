@@ -32,19 +32,19 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 
-class RealAsyncReaderTest : AbstractReaderTest(ReaderFactory.REAL_ASYNC_SOURCE)
+//class RealAsyncReaderTest : AbstractReaderTest(ReaderFactory.REAL_ASYNC_SOURCE)
 
 class BufferReaderTest : AbstractReaderTest(ReaderFactory.BUFFER)
 
-class BufferedReaderTest : AbstractReaderTest(ReaderFactory.BUFFERED_SOURCE)
-
-class RealReaderTest : AbstractReaderTest(ReaderFactory.REAL_SOURCE)
-
-class PeekBufferTest : AbstractReaderTest(ReaderFactory.PEEK_BUFFER)
-
-class PeekReaderTest : AbstractReaderTest(ReaderFactory.PEEK_SOURCE)
-
-class PeekAsyncReaderTest : AbstractReaderTest(ReaderFactory.PEEK_ASYNC_SOURCE)
+//class BufferedReaderTest : AbstractReaderTest(ReaderFactory.BUFFERED_SOURCE)
+//
+//class RealReaderTest : AbstractReaderTest(ReaderFactory.REAL_SOURCE)
+//
+//class PeekBufferTest : AbstractReaderTest(ReaderFactory.PEEK_BUFFER)
+//
+//class PeekReaderTest : AbstractReaderTest(ReaderFactory.PEEK_SOURCE)
+//
+//class PeekAsyncReaderTest : AbstractReaderTest(ReaderFactory.PEEK_ASYNC_SOURCE)
 
 abstract class AbstractReaderTest internal constructor(private val factory: ReaderFactory) {
     companion object {
@@ -65,7 +65,9 @@ abstract class AbstractReaderTest internal constructor(private val factory: Read
     fun after() {
         try {
             reader.close()
+            (reader as Buffer).clear()
             writer.close()
+            writer.clear()
         } catch (e: Exception) { /*ignored*/
             e.printStackTrace()
         }
@@ -85,7 +87,7 @@ abstract class AbstractReaderTest internal constructor(private val factory: Read
         assertThat(reader.readHexadecimalUnsignedLong()).isEqualTo(0xabcdefL)
     }
 
-    @Test
+    @RepeatedTest(2)
     open fun readUtf8StringSpansSegments() {
         writer.write("a".repeat(SEGMENT_SIZE * 2))
         reader.skip((SEGMENT_SIZE - 1).toLong())

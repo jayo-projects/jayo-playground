@@ -28,6 +28,7 @@ package jayo.playground.core;
 import jayo.playground.core.impl0.RealBuffer0;
 import jayo.playground.core.impl1.RealBuffer1;
 import jayo.playground.core.impl2.RealBuffer2;
+import jayo.playground.core.impl3.RealBuffer3;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -76,8 +77,15 @@ public interface Buffer extends Reader, Writer, Cloneable {
     }
 
     /**
-     * @return the current number of bytes that can be read (or skipped over) from this buffer, which may be 0. Ongoing
-     * or future write operations may increase the number of available bytes.
+     * @return a new {@link Buffer}
+     */
+    static @NonNull Buffer create3() {
+        return new RealBuffer3();
+    }
+
+    /**
+     * @return the current number of bytes that can be read (or skipped over) from this buffer, which may be {@code 0L}.
+     * Ongoing or future write operations may increase the number of available bytes.
      */
     @Override
     long bytesAvailable();

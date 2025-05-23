@@ -6,6 +6,8 @@ import jayo.playground.core.Reader
 import jayo.playground.scheduling.TaskRunner
 import org.openjdk.jmh.annotations.*
 import java.io.InputStream
+import java.nio.ByteBuffer
+import java.nio.channels.ReadableByteChannel
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
@@ -18,7 +20,7 @@ import kotlin.random.Random
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class SlowReaderBenchmark {
-    @Param("0", "1", "2")
+    @Param(/*"0", "1", */"2", "3")
     private var readerVersion = 0
 
     companion object {
@@ -47,6 +49,22 @@ open class SlowReaderBenchmark {
             }
         }
 
+        val delayedReadableByteChannel = object : ReadableByteChannel {
+            override fun read(dst: ByteBuffer): Int {
+                randomSleep()
+                val toRead = minOf(dst.remaining(), CHUNKS_BYTE_SIZE)
+                dst.put(ARRAY, 0, toRead)
+                return toRead
+            }
+
+            override fun isOpen(): Boolean {
+                return true
+            }
+
+            override fun close() {
+            }
+        }
+
         when (readerVersion) {
             0 -> {
                 jayoReader = Jayo.bufferAsync0(Jayo.reader0(delayedInputStream))
@@ -58,6 +76,10 @@ open class SlowReaderBenchmark {
 
             2 -> {
                 jayoReader = Jayo.bufferAsync2(Jayo.reader2(delayedInputStream), TASK_RUNNER)
+            }
+
+            3 -> {
+                jayoReader = Jayo.buffer3(Jayo.reader3(delayedReadableByteChannel))
             }
 
             else -> throw IllegalStateException("Unknown reader version: $jayoReader")
@@ -75,7 +97,7 @@ open class SlowReaderBenchmark {
 
     @Benchmark
     fun readerJayo() {
-        IntRange(0, CHUNKS).forEach { _ ->
+        IntRange(0, CHUNKS).forEach { idx ->
             randomSleep()
             check(jayoReader.readString(CHUNKS_BYTE_SIZE.toLong()).contentEquals(STRING))
         }

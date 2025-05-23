@@ -46,8 +46,8 @@ public final class RealReader0 implements Reader {
     }
 
     @Override
-    public long readAtMostTo(final @NonNull Buffer writer, final long byteCount) {
-        Objects.requireNonNull(writer);
+    public long readAtMostTo(final @NonNull Buffer destination, final long byteCount) {
+        Objects.requireNonNull(destination);
         if (byteCount < 0L) {
             throw new IllegalArgumentException("byteCount < 0: " + byteCount);
         }
@@ -59,7 +59,7 @@ public final class RealReader0 implements Reader {
             return -1;
         }
 
-        return segmentQueue.buffer.readAtMostTo(writer, byteCount);
+        return segmentQueue.buffer.readAtMostTo(destination, byteCount);
     }
 
     @Override
