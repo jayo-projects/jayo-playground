@@ -76,7 +76,7 @@ public final class SinglyLinkedBasicFifoQueue<T> implements BasicFifoQueue<T> {
 
     @Override
     public boolean isEmpty() {
-        return head == null && tail == null;
+        return head == null;
     }
 
     @Override

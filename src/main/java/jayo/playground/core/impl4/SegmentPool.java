@@ -23,7 +23,7 @@
  * limitations under the License.
  */
 
-package jayo.playground.core.impl2;
+package jayo.playground.core.impl4;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -98,7 +98,7 @@ final class SegmentPool {
     /**
      * A sentinel segment to indicate that the cache is currently being modified.
      */
-    private static final Segment DOOR = new Segment(new byte[0], 0, 0, null, null, null, false);
+    private static final Segment DOOR = new Segment(new byte[0], 0, 0, null, false);
 
     /**
      * Hash buckets each contain a singly-linked queue of segments. The index/key is a hash function of thread ID
@@ -175,7 +175,6 @@ final class SegmentPool {
             first.pos = 0;
             first.owner = true;
             first.limit = 0;
-            first.status = Segment.WRITING;
 
             return first;
         }
@@ -218,7 +217,6 @@ final class SegmentPool {
             first.pos = 0;
             first.owner = true;
             first.limit = 0;
-            first.status = Segment.WRITING;
 
             return first;
         }

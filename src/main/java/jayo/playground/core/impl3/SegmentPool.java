@@ -63,7 +63,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * (one of {@code #HASH_BUCKET_COUNT}).
  */
 @SuppressWarnings("unchecked")
-public final class SegmentPool {
+final class SegmentPool {
     // un-instantiable
     private SegmentPool() {
     }
@@ -79,7 +79,7 @@ public final class SegmentPool {
      */
     // TODO: Is this a good maximum size?
     static final int FIRST_LEVEL_POOL_MAX_BYTE_SIZE = FIRST_LEVEL_POOL_LENGTH * Segment.SIZE; // ~150 KiB.
-    private static final int DEFAULT_SECOND_LEVEL_POOL_TOTAL_SIZE = 4 * 1024 * 1024; // 4MB
+    private static final int DEFAULT_SECOND_LEVEL_POOL_TOTAL_SIZE = SECOND_LEVEL_POOL_LENGTH * Segment.SIZE; // 4MB
 
     /**
      * The number of hash buckets. This number needs to balance keeping the pool small and contention low. We use the

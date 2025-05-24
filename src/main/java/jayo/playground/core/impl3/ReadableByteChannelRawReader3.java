@@ -48,7 +48,7 @@ public final class ReadableByteChannelRawReader3 implements RawReader {
                     "ReadableByteChannel to Buffer({2}){3}", byteCount, buffer, System.lineSeparator());
         }
 
-        final var tail = buffer.writableSegment(1);
+        final var tail = buffer.writableTail(1);
         final var tailByteBuffer = tail.byteBuffer;
         tailByteBuffer.mark();
         tailByteBuffer.position(tailByteBuffer.limit());

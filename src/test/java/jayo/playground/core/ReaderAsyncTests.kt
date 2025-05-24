@@ -99,7 +99,7 @@ class ReaderAsyncTests {
 
         var result = ""
         var offset = 0
-        Jayo.bufferAsync2(Jayo.reader2(inputStream), TASK_RUNNER).use { reader ->
+        Jayo.buffer4(Jayo.reader4(inputStream)).use { reader ->
             while (offset < EXPECTED_SIZE) {
                 Thread.sleep(0, Random.nextInt(5) /*in nanos*/)
                 result += reader.readString((CHUNKS_BYTE_SIZE / 2).toLong())

@@ -66,7 +66,7 @@ import static java.lang.System.Logger.Level.INFO;
  * (one of {@code #HASH_BUCKET_COUNT}).
  */
 @SuppressWarnings("unchecked")
-public final class SegmentPool {
+final class SegmentPool {
     private static final System.Logger LOGGER = System.getLogger("jayo.SegmentPool");
 
     // un-instantiable
