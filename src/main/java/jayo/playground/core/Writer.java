@@ -40,7 +40,7 @@ import org.jspecify.annotations.NonNull;
 public interface Writer extends RawWriter {
 
     /**
-     * Encodes all the characters from {@code charSequence} using UTF-8 and writes them to this writer.
+     * Encodes all the characters from {@code string} using UTF-8 and writes them to this writer.
      * <pre>
      * {@code
      * Buffer buffer = Buffer.create();
@@ -52,21 +52,12 @@ public interface Writer extends RawWriter {
      * }
      * </pre>
      *
-     * @param charSequence the char sequence to be encoded.
+     * @param string the string to be encoded.
      * @return {@code this}
      * @throws JayoClosedResourceException if this writer is closed.
      */
     @NonNull
-    Writer write(final @NonNull CharSequence charSequence);
-
-    /**
-     * @throws IndexOutOfBoundsException {@inheritDoc}
-     * @throws IllegalArgumentException  {@inheritDoc}
-     */
-    @NonNull
-    Writer write(final @NonNull CharSequence charSequence,
-                 final int startIndex,
-                 final int endIndex);
+    Writer write(final @NonNull String string);
 
     /**
      * Removes all bytes from {@code source} and writes them to this sink.

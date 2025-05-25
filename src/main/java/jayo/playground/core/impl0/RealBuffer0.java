@@ -558,117 +558,23 @@ public final class RealBuffer0 implements Buffer {
     }
 
     @Override
-    public @NonNull Buffer write(final @NonNull CharSequence charSequence) {
-        return write(charSequence, 0, charSequence.length());
-    }
+    public @NonNull Buffer write(final @NonNull String string) {
+        Objects.requireNonNull(string);
 
-    @Override
-    public @NonNull Buffer write(final @NonNull CharSequence charSequence,
-                                 final int startIndex,
-                                 final int endIndex) {
-        Objects.requireNonNull(charSequence);
-        if (endIndex < startIndex) {
-            throw new IllegalArgumentException("endIndex < beginIndex: " + endIndex + " < " + startIndex);
-        }
-        if (startIndex < 0) {
-            throw new IndexOutOfBoundsException("beginIndex < 0: " + startIndex);
-        }
-        if (endIndex > charSequence.length()) {
-            throw new IndexOutOfBoundsException("endIndex > string.length: " + endIndex + " > " + charSequence.length());
-        }
-
-        if (startIndex == endIndex) {
-            return this;
-        }
-
-        if (LOGGER.isLoggable(TRACE)) {
-            LOGGER.log(TRACE,
-                    "Buffer(SegmentQueue#{0}) : Start writing {1} chars from CharSequence encoded in UTF-8{2}",
-                    segmentQueue.hashCode(), endIndex - startIndex, System.lineSeparator());
-        }
-
-        // fast-path for ISO_8859_1 encoding
-        writeUtf16ToUtf8(charSequence, startIndex, endIndex);
-
-        if (LOGGER.isLoggable(TRACE)) {
-            LOGGER.log(TRACE, """
-                            Buffer(SegmentQueue#{0}) : Finished writing {1} chars from CharSequence encoded in UTF-8 to this segment queue
-                            {2}{3}""",
-                    segmentQueue.hashCode(), endIndex - startIndex, segmentQueue, System.lineSeparator());
-        }
-        return this;
-    }
-
-    /**
-     * Transcode a UTF-16 Java String to UTF-8 bytes.
-     */
-    private void writeUtf16ToUtf8(final @NonNull CharSequence charSequence,
-                                  final int startIndex,
-                                  final int endIndex) {
-        final var i = new Wrapper.Int(startIndex);
-        while (i.value < endIndex) {
-            // We require at least 4 writable bytes in the tail to write one code point of this char-sequence : the max
-            // byte size of a char code point is 4 !
-            segmentQueue.withWritableTail(4, tail -> {
-                var limit = tail.limit();
-                while (i.value < endIndex && (Segment.SIZE - limit) > 3) {
-                    final var data = tail.data;
-                    final int c = charSequence.charAt(i.value);
-                    if (c < 0x80) {
-                        final var segmentOffset = limit - i.value;
-                        final var runLimit = Math.min(endIndex, Segment.SIZE - segmentOffset);
-
-                        // Emit a 7-bit character with 1 byte.
-                        data[segmentOffset + i.value++] = (byte) c; // 0xxxxxxx
-
-                        // Fast-path contiguous runs of ASCII characters. This is ugly, but yields a ~4x performance
-                        // improvement over independent calls to writeByte().
-                        while (i.value < runLimit) {
-                            final var c1 = charSequence.charAt(i.value);
-                            if (c1 >= 0x80) {
-                                break;
-                            }
-                            data[segmentOffset + i.value++] = (byte) c1; // 0xxxxxxx
-                        }
-
-                        limit = i.value + segmentOffset; // Equivalent to i - (previous i).
-                    } else if (c < 0x800) {
-                        // Emit a 11-bit character with 2 bytes.
-                        data[limit++] = (byte) (c >> 6 | 0xc0); // 110xxxxx
-                        data[limit++] = (byte) (c & 0x3f | 0x80); // 10xxxxxx
-                        i.value++;
-                    } else if ((c < 0xd800) || (c > 0xdfff)) {
-                        // Emit a 16-bit character with 3 bytes.
-                        data[limit++] = (byte) (c >> 12 | 0xe0); // 1110xxxx
-                        data[limit++] = (byte) (c >> 6 & 0x3f | 0x80); // 10xxxxxx
-                        data[limit++] = (byte) (c & 0x3f | 0x80); // 10xxxxxx
-                        i.value++;
-                    } else {
-                        // c is a surrogate. Mac successor is a low surrogate. If not, the UTF-16 is invalid, in which
-                        // case we emit a replacement character.
-                        final int low = (i.value + 1 < endIndex) ? charSequence.charAt(i.value + 1) : 0;
-                        if (c > 0xdbff || low < 0xdc00 || low > 0xdfff) {
-                            data[limit++] = (byte) ((int) '?');
-                            i.value++;
-                        } else {
-                            // UTF-16 high surrogate: 110110xxxxxxxxxx (10 bits)
-                            // UTF-16 low surrogate:  110111yyyyyyyyyy (10 bits)
-                            // Unicode code point:    00010000000000000000 + xxxxxxxxxxyyyyyyyyyy (21 bits)
-                            final var codePoint = 0x010000 + ((c & 0x03ff) << 10 | (low & 0x03ff));
-
-                            // Emit a 21-bit character with 4 bytes.
-                            data[limit++] = (byte) (codePoint >> 18 | 0xf0); // 11110xxx
-                            data[limit++] = (byte) (codePoint >> 12 & 0x3f | 0x80); // 10xxxxxx
-                            data[limit++] = (byte) (codePoint >> 6 & 0x3f | 0x80); // 10xxyyyy
-                            data[limit++] = (byte) (codePoint & 0x3f | 0x80); // 10yyyyyy
-                            i.value += 2;
-                        }
-                    }
-                }
-                tail.limitVolatile(limit);
+        final var bytes = string.getBytes(StandardCharsets.UTF_8);
+        final var length = bytes.length;
+        final var pos = new Wrapper.Int(0);
+        while (pos.value < length) {
+            segmentQueue.withWritableTail(1, tail -> {
+                final var tailLimit = tail.limit();
+                final var toCopy = Math.min(length - pos.value, Segment.SIZE - tailLimit);
+                System.arraycopy(bytes, pos.value, tail.data, tailLimit, toCopy);
+                pos.value += toCopy;
+                tail.limitVolatile(tailLimit + toCopy);
                 return null;
             });
         }
+        return this;
     }
 
     @Override

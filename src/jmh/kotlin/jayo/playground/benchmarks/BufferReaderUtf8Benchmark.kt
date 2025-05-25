@@ -19,7 +19,7 @@ open class BufferReaderUtf8Benchmark {
     @Param("20", "2000", "200000")
     private var length = 0
 
-    @Param("ascii", "utf8", "2bytes"/*, "latin1", "3bytes", "4bytes", "bad"*/)
+    @Param("ascii", "latin1", "utf8", "2bytes"/*, "3bytes", "4bytes", "bad"*/)
     private lateinit var encoding: String
 
     companion object {

@@ -138,15 +138,5 @@ public interface Buffer extends Reader, Writer, Cloneable {
 
     @Override
     @NonNull
-    Buffer write(final @NonNull CharSequence charSequence);
-
-    /**
-     * @throws IndexOutOfBoundsException {@inheritDoc}
-     * @throws IllegalArgumentException  {@inheritDoc}
-     */
-    @Override
-    @NonNull
-    Buffer write(final @NonNull CharSequence charSequence,
-                 final int startIndex,
-                 final int endIndex);
+    Buffer write(final @NonNull String string);
 }
