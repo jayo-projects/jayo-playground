@@ -445,76 +445,72 @@ public final class RealBuffer4 implements Buffer {
                                   final int endIndex) {
         var i = startIndex;
         while (i < endIndex) {
-            var c = (int) charSequence.charAt(i);
-            if (c < 0x80) {
-                final var tail = segmentQueue.writableTail(1);
-                final var segmentOffset = tail.limit - i;
-                final var runLimit = Math.min(endIndex, Segment.SIZE - segmentOffset);
+            // We require at least 4 writable bytes in the tail to write one code point of this char sequence: the max
+            // byte size of a char code point is 4!
+            final var tail = segmentQueue.writableTail(4);
+            var limit = tail.limit;
+            while (i < endIndex && (Segment.SIZE - limit) > 3) {
+                final var data = tail.data;
+                var c = (int) charSequence.charAt(i);
+                if (c < 0x80) {
+                    final var segmentOffset = limit - i;
+                    final var runLimit = Math.min(endIndex, Segment.SIZE - segmentOffset);
 
-                // Emit a 7-bit character with 1 byte.
-                tail.data[segmentOffset + i++] = (byte) c; // 0xxxxxxx
-
-                // Fast-path contiguous runs of ASCII characters. This is ugly but yields a ~4x performance improvement
-                // over independent calls to writeByte().
-                while (i < runLimit) {
-                    c = charSequence.charAt(i);
-                    if (c >= 0x80) {
-                        break;
-                    }
+                    // Emit a 7-bit character with 1 byte.
                     tail.data[segmentOffset + i++] = (byte) c; // 0xxxxxxx
-                }
 
-                final var runSize = i + segmentOffset - tail.limit; // Equivalent to i - (previous i).
-                tail.limit += runSize;
-                byteSize += runSize;
+                    // Fast-path contiguous runs of ASCII characters. This is ugly but yields a ~4x performance improvement
+                    // over independent calls to writeByte().
+                    while (i < runLimit) {
+                        c = charSequence.charAt(i);
+                        if (c >= 0x80) {
+                            break;
+                        }
+                        tail.data[segmentOffset + i++] = (byte) c; // 0xxxxxxx
+                    }
 
-            } else if (c < 0x800) {
-                // Emit a 11-bit character with 2 bytes.
-                final var tail = segmentQueue.writableTail(2);
-                // @formatter:off
-                tail.data[tail.limit++] = (byte) (c >> 6        | 0xc0); // 110xxxxx
-                tail.data[tail.limit++] = (byte) (c      & 0x3f | 0x80); // 10xxxxxx
-                // @formatter:on
-                byteSize += 2L;
-                i++;
-
-            } else if ((c < 0xd800) || (c > 0xdfff)) {
-                // Emit a 16-bit character with 3 bytes.
-                final var tail = segmentQueue.writableTail(2);
-                // @formatter:off
-                tail.data[tail.limit++] = (byte) (c >> 12        | 0xe0); // 1110xxxx
-                tail.data[tail.limit++] = (byte) (c >>  6 & 0x3f | 0x80); // 10xxxxxx
-                tail.data[tail.limit++] = (byte) (c       & 0x3f | 0x80); // 10xxxxxx
-                // @formatter:on
-                byteSize += 3L;
-                i++;
-
-            } else {
-                // c is a surrogate. Make sure it is a high surrogate and that its successor is a low surrogate. If not,
-                // the UTF-16 is invalid, in which case we emit a replacement character.
-                final int low = (i + 1 < endIndex) ? charSequence.charAt(i + 1) : 0;
-                if (c > 0xdbff || low < 0xdc00 || low > 0xdfff) {
-                    final var tail = segmentQueue.writableTail(1);
-                    tail.data[tail.limit++] = (byte) ((int) '?');
+                    limit = i + segmentOffset; // Equivalent to i - (previous i).
+                } else if (c < 0x800) {
+                    // Emit a 11-bit character with 2 bytes.
+                    // @formatter:off
+                    tail.data[limit++] = (byte) (c >> 6        | 0xc0); // 110xxxxx
+                    tail.data[limit++] = (byte) (c      & 0x3f | 0x80); // 10xxxxxx
+                    // @formatter:on
+                    i++;
+                } else if ((c < 0xd800) || (c > 0xdfff)) {
+                    // Emit a 16-bit character with 3 bytes.
+                    // @formatter:off
+                    tail.data[limit++] = (byte) (c >> 12        | 0xe0); // 1110xxxx
+                    tail.data[limit++] = (byte) (c >>  6 & 0x3f | 0x80); // 10xxxxxx
+                    tail.data[limit++] = (byte) (c       & 0x3f | 0x80); // 10xxxxxx
+                    // @formatter:on
                     i++;
                 } else {
-                    // UTF-16 high surrogate: 110110xxxxxxxxxx (10 bits)
-                    // UTF-16 low surrogate:  110111yyyyyyyyyy (10 bits)
-                    // Unicode code point:    00010000000000000000 + xxxxxxxxxxyyyyyyyyyy (21 bits)
-                    final var codePoint = 0x010000 + ((c & 0x03ff) << 10 | (low & 0x03ff));
+                    // c is a surrogate. Mac successor is a low surrogate. If not, the UTF-16 is invalid, in which
+                    // case we emit a replacement character.
+                    final int low = (i + 1 < endIndex) ? charSequence.charAt(i + 1) : 0;
+                    if (c > 0xdbff || low < 0xdc00 || low > 0xdfff) {
+                        data[limit++] = (byte) ((int) '?');
+                        i++;
+                    } else {
+                        // UTF-16 high surrogate: 110110xxxxxxxxxx (10 bits)
+                        // UTF-16 low surrogate:  110111yyyyyyyyyy (10 bits)
+                        // Unicode code point:    00010000000000000000 + xxxxxxxxxxyyyyyyyyyy (21 bits)
+                        final var codePoint = 0x010000 + ((c & 0x03ff) << 10 | (low & 0x03ff));
 
-                    // Emit a 21-bit character with 4 bytes.
-                    final var tail = segmentQueue.writableTail(2);
-                    // @formatter:off
-                    tail.data[tail.limit++] = (byte) (codePoint >> 18        | 0xf0); // 11110xxx
-                    tail.data[tail.limit++] = (byte) (codePoint >> 12 & 0x3f | 0x80); // 10xxxxxx
-                    tail.data[tail.limit++] = (byte) (codePoint >>  6 & 0x3f | 0x80); // 10xxyyyy
-                    tail.data[tail.limit++] = (byte) (codePoint       & 0x3f | 0x80); // 10yyyyyy
-                    // @formatter:on
-                    byteSize += 4L;
-                    i += 2;
+                        // Emit a 21-bit character with 4 bytes.
+                        // @formatter:off
+                        tail.data[limit++] = (byte) (codePoint >> 18        | 0xf0); // 11110xxx
+                        tail.data[limit++] = (byte) (codePoint >> 12 & 0x3f | 0x80); // 10xxxxxx
+                        tail.data[limit++] = (byte) (codePoint >>  6 & 0x3f | 0x80); // 10xxyyyy
+                        tail.data[limit++] = (byte) (codePoint       & 0x3f | 0x80); // 10yyyyyy
+                        // @formatter:on
+                        i += 2;
+                    }
                 }
             }
+            byteSize += (limit - tail.limit);
+            tail.limit = limit;
         }
     }
 

@@ -13,13 +13,13 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class BufferReaderUtf8Benchmark {
-    @Param(/*"0", "1",*/ "2", "3")
+    @Param("2", "3", "4")
     private var bufferVersion = 0
 
     @Param("20", "2000", "200000")
     private var length = 0
 
-    @Param("ascii", "utf8"/*, "2bytes", "latin1", "3bytes", "4bytes", "bad"*/)
+    @Param("ascii", "utf8", "2bytes"/*, "latin1", "3bytes", "4bytes", "bad"*/)
     private lateinit var encoding: String
 
     companion object {
@@ -92,6 +92,10 @@ open class BufferReaderUtf8Benchmark {
                 buffer = Buffer.create3()
             }
 
+            4 -> {
+                buffer = Buffer.create4()
+            }
+
             else -> throw IllegalStateException("Unknown buffer version: $bufferVersion")
         }
     }
@@ -102,10 +106,10 @@ open class BufferReaderUtf8Benchmark {
         buffer.clear()
     }
 
-    @Benchmark
-    fun readUtf8StringJayo() {
-        buffer.write(text)
-        val read = buffer.readString()
-        check(read.contentEquals(text))
-    }
+//    @Benchmark
+//    fun readUtf8StringJayo() {
+//        buffer.write(text)
+//        val read = buffer.readString()
+//        check(read.contentEquals(text))
+//    }
 }

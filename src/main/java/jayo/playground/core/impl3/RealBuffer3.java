@@ -502,7 +502,7 @@ public final class RealBuffer3 implements Buffer {
 
             } else if ((c < 0xd800) || (c > 0xdfff)) {
                 // Emit a 16-bit character with 3 bytes.
-                final var tail = writableTail(2);
+                final var tail = writableTail(3);
                 final var tailByteBuffer = tail.byteBuffer;
                 final var limit = tailByteBuffer.limit();
                 tailByteBuffer.limit(limit + 3);
@@ -532,7 +532,7 @@ public final class RealBuffer3 implements Buffer {
                     final var codePoint = 0x010000 + ((c & 0x03ff) << 10 | (low & 0x03ff));
 
                     // Emit a 21-bit character with 4 bytes.
-                    final var tail = writableTail(2);
+                    final var tail = writableTail(4);
                     final var tailBB = tail.byteBuffer;
                     final var limit = tailBB.limit();
                     tailBB.limit(limit + 4);
