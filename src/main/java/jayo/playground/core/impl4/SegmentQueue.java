@@ -34,11 +34,23 @@ final class SegmentQueue {
     Segment writableTail(final int minimumCapacity) {
         assert minimumCapacity > 0;
 
-        if (tail == null || !tail.owner || tail.limit + minimumCapacity > Segment.SIZE) {
-            // Append a new empty segment to fill up.
-            return addTail(SegmentPool.take());
+        if (tail == null) {
+            final var newTail = SegmentPool.take();
+            head = newTail;
+            tail = newTail;
+            return newTail;
         }
-        return tail;
+
+        // the current tail has enough room
+        if (tail.owner && tail.limit + minimumCapacity <= Segment.SIZE) {
+            return tail;
+        }
+
+        // Append a new empty segment to fill up.
+        final var newTail = SegmentPool.take();
+        tail.next = newTail;
+        tail = newTail;
+        return newTail;
     }
 
     @NonNull

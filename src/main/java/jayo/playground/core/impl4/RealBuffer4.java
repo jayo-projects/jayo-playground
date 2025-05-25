@@ -57,16 +57,15 @@ public final class RealBuffer4 implements Buffer {
 
         final var _out = (RealBuffer4) out;
         var _offset = offset;
+        _out.byteSize += byteCount;
 
-        // Skip segment nodes that we aren't copying from.
+        // Skip segments that we aren't copying from.
         var segment = segmentQueue.head;
         assert segment != null;
-        var segmentSize = segment.limit - segment.pos;
-        while (_offset >= segmentSize) {
-            _offset -= segmentSize;
+        while (_offset >= segment.limit - segment.pos) {
+            _offset -= (segment.limit - segment.pos);
             segment = segment.next;
             assert segment != null;
-            segmentSize = segment.limit - segment.pos;
         }
 
         var remaining = byteCount;
@@ -74,12 +73,10 @@ public final class RealBuffer4 implements Buffer {
         while (remaining > 0L) {
             assert segment != null;
             final var segmentCopy = segment.sharedCopy();
-            segmentCopy.pos = (int) (segmentCopy.pos + _offset);
+            segmentCopy.pos += (int) _offset;
             segmentCopy.limit = (int) Math.min(segmentCopy.pos + remaining, segmentCopy.limit);
-            final var copied = segmentCopy.limit - segmentCopy.pos;
             _out.segmentQueue.addTail(segmentCopy);
-            _out.byteSize += copied;
-            remaining -= copied;
+            remaining -= segmentCopy.limit - segmentCopy.pos;
             _offset = 0L;
             segment = segment.next;
         }
@@ -213,7 +210,17 @@ public final class RealBuffer4 implements Buffer {
         if (byteSize == 0L) {
             return;
         }
-        skipInternal(byteSize);
+
+        var segment = segmentQueue.head;
+        while (segment != null) {
+            final var previous = segment;
+            segment = segmentQueue.removeHead();
+            SegmentPool.recycle(previous);
+        }
+
+        byteSize = 0L;
+        segmentQueue.head = null;
+        segmentQueue.tail = null;
     }
 
     @Override
@@ -320,8 +327,8 @@ public final class RealBuffer4 implements Buffer {
 
         final var src = (RealBuffer4) source;
         var remaining = byteCount;
+        var tail = segmentQueue.tail;
         while (remaining > 0L) {
-            final var tail = segmentQueue.tail;
             var srcHead = src.segmentQueue.head;
             assert srcHead != null;
             // Is a prefix of the source's head segment all that we need to move?
@@ -345,7 +352,7 @@ public final class RealBuffer4 implements Buffer {
             final var movedByteCount = srcHead.limit - srcHead.pos;
             final var newTail = newTailIfNeeded(tail, srcHead);
             if (newTail != null) {
-                segmentQueue.addTail(newTail);
+                tail = segmentQueue.addTail(newTail);
             }
             remaining -= movedByteCount;
             src.byteSize -= movedByteCount;
@@ -438,7 +445,7 @@ public final class RealBuffer4 implements Buffer {
                                   final int endIndex) {
         var i = startIndex;
         while (i < endIndex) {
-            final int c = charSequence.charAt(i);
+            var c = (int) charSequence.charAt(i);
             if (c < 0x80) {
                 final var tail = segmentQueue.writableTail(1);
                 final var segmentOffset = tail.limit - i;
@@ -450,11 +457,11 @@ public final class RealBuffer4 implements Buffer {
                 // Fast-path contiguous runs of ASCII characters. This is ugly but yields a ~4x performance improvement
                 // over independent calls to writeByte().
                 while (i < runLimit) {
-                    final var c1 = charSequence.charAt(i);
-                    if (c1 >= 0x80) {
+                    c = charSequence.charAt(i);
+                    if (c >= 0x80) {
                         break;
                     }
-                    tail.data[segmentOffset + i++] = (byte) c1; // 0xxxxxxx
+                    tail.data[segmentOffset + i++] = (byte) c; // 0xxxxxxx
                 }
 
                 final var runSize = i + segmentOffset - tail.limit; // Equivalent to i - (previous i).
