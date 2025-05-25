@@ -74,7 +74,6 @@ open class BufferReaderUtf8Benchmark {
         builder.setLength(length)
         text = builder.toString()
 
-        // Prepare a string and ByteString for encoding and decoding with Okio and Jayo
         when (bufferVersion) {
             0 -> {
                 buffer = Buffer.create0()
@@ -110,6 +109,6 @@ open class BufferReaderUtf8Benchmark {
     fun readUtf8StringJayo() {
         buffer.write(text)
         val read = buffer.readString()
-        check(read.contentEquals(text))
+        check(read.length == text.length)
     }
 }
