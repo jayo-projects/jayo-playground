@@ -106,10 +106,10 @@ open class BufferReaderUtf8Benchmark {
         buffer.clear()
     }
 
-//    @Benchmark
-//    fun readUtf8StringJayo() {
-//        buffer.write(text)
-//        val read = buffer.readString()
-//        check(read.contentEquals(text))
-//    }
+    @Benchmark
+    fun readUtf8StringJayo() {
+        buffer.write(text)
+        val read = buffer.readString()
+        check(read.contentEquals(text))
+    }
 }

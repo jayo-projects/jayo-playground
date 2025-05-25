@@ -437,6 +437,8 @@ public final class RealBuffer4 implements Buffer {
         return this;
     }
 
+    private static final int WRITE_UTF8_MAX_LIMIT = Segment.SIZE - 3;
+
     /**
      * Transcode a UTF-16 Java String to UTF-8 bytes.
      */
@@ -444,20 +446,21 @@ public final class RealBuffer4 implements Buffer {
                                   final int startIndex,
                                   final int endIndex) {
         var i = startIndex;
+
         while (i < endIndex) {
             // We require at least 4 writable bytes in the tail to write one code point of this char sequence: the max
             // byte size of a char code point is 4!
             final var tail = segmentQueue.writableTail(4);
+            final var data = tail.data;
             var limit = tail.limit;
-            while (i < endIndex && (Segment.SIZE - limit) > 3) {
-                final var data = tail.data;
-                var c = (int) charSequence.charAt(i);
+            while (i < endIndex && limit < WRITE_UTF8_MAX_LIMIT) {
+                var c = charSequence.charAt(i);
                 if (c < 0x80) {
                     final var segmentOffset = limit - i;
                     final var runLimit = Math.min(endIndex, Segment.SIZE - segmentOffset);
 
                     // Emit a 7-bit character with 1 byte.
-                    tail.data[segmentOffset + i++] = (byte) c; // 0xxxxxxx
+                    data[segmentOffset + i++] = (byte) c; // 0xxxxxxx
 
                     // Fast-path contiguous runs of ASCII characters. This is ugly but yields a ~4x performance improvement
                     // over independent calls to writeByte().
@@ -466,25 +469,27 @@ public final class RealBuffer4 implements Buffer {
                         if (c >= 0x80) {
                             break;
                         }
-                        tail.data[segmentOffset + i++] = (byte) c; // 0xxxxxxx
+                        data[segmentOffset + i++] = (byte) c; // 0xxxxxxx
                     }
-
                     limit = i + segmentOffset; // Equivalent to i - (previous i).
+
                 } else if (c < 0x800) {
                     // Emit a 11-bit character with 2 bytes.
                     // @formatter:off
-                    tail.data[limit++] = (byte) (c >> 6        | 0xc0); // 110xxxxx
-                    tail.data[limit++] = (byte) (c      & 0x3f | 0x80); // 10xxxxxx
+                    data[limit++] = (byte) (c >> 6        | 0xc0); // 110xxxxx
+                    data[limit++] = (byte) (c      & 0x3f | 0x80); // 10xxxxxx
                     // @formatter:on
                     i++;
+
                 } else if ((c < 0xd800) || (c > 0xdfff)) {
                     // Emit a 16-bit character with 3 bytes.
                     // @formatter:off
-                    tail.data[limit++] = (byte) (c >> 12        | 0xe0); // 1110xxxx
-                    tail.data[limit++] = (byte) (c >>  6 & 0x3f | 0x80); // 10xxxxxx
-                    tail.data[limit++] = (byte) (c       & 0x3f | 0x80); // 10xxxxxx
+                    data[limit++] = (byte) (c >> 12        | 0xe0); // 1110xxxx
+                    data[limit++] = (byte) (c >>  6 & 0x3f | 0x80); // 10xxxxxx
+                    data[limit++] = (byte) (c       & 0x3f | 0x80); // 10xxxxxx
                     // @formatter:on
                     i++;
+
                 } else {
                     // c is a surrogate. Mac successor is a low surrogate. If not, the UTF-16 is invalid, in which
                     // case we emit a replacement character.
@@ -500,10 +505,10 @@ public final class RealBuffer4 implements Buffer {
 
                         // Emit a 21-bit character with 4 bytes.
                         // @formatter:off
-                        tail.data[limit++] = (byte) (codePoint >> 18        | 0xf0); // 11110xxx
-                        tail.data[limit++] = (byte) (codePoint >> 12 & 0x3f | 0x80); // 10xxxxxx
-                        tail.data[limit++] = (byte) (codePoint >>  6 & 0x3f | 0x80); // 10xxyyyy
-                        tail.data[limit++] = (byte) (codePoint       & 0x3f | 0x80); // 10yyyyyy
+                        data[limit++] = (byte) (codePoint >> 18        | 0xf0); // 11110xxx
+                        data[limit++] = (byte) (codePoint >> 12 & 0x3f | 0x80); // 10xxxxxx
+                        data[limit++] = (byte) (codePoint >>  6 & 0x3f | 0x80); // 10xxyyyy
+                        data[limit++] = (byte) (codePoint       & 0x3f | 0x80); // 10yyyyyy
                         // @formatter:on
                         i += 2;
                     }
