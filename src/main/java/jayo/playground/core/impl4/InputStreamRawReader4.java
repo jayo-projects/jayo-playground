@@ -61,11 +61,11 @@ public final class InputStreamRawReader4 implements RawReader {
 
         if (LOGGER.isLoggable(TRACE)) {
             LOGGER.log(TRACE, "InputStreamRawReader: Start reading up to {0} bytes from the InputStream to " +
-                            "{1}Buffer(SegmentQueue={2}){3}",
-                    byteCount, System.lineSeparator(), dst.segmentQueue, System.lineSeparator());
+                            "{1}Buffer#{2}{3}",
+                    byteCount, System.lineSeparator(), dst, System.lineSeparator());
         }
 
-        final var dstTail = dst.segmentQueue.writableTail(1);
+        final var dstTail = dst.writableTail(1);
         final var toRead = (int) Math.min(byteCount, Segment.SIZE - dstTail.limit);
         final int read;
         try {
@@ -80,8 +80,8 @@ public final class InputStreamRawReader4 implements RawReader {
 
         if (LOGGER.isLoggable(TRACE)) {
             LOGGER.log(TRACE, "InputStreamRawReader: Finished reading {0} / {1} bytes from the InputStream to " +
-                            "{2}Buffer(SegmentQueue={3}){4}",
-                    read, byteCount, System.lineSeparator(), dst.segmentQueue, System.lineSeparator());
+                            "{2}Buffer#{3}{4}",
+                    read, byteCount, System.lineSeparator(), dst, System.lineSeparator());
         }
 
         return read;
