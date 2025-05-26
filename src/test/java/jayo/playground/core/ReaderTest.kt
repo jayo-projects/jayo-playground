@@ -49,6 +49,8 @@ class PeekAsyncReaderTest : AbstractReaderTest(ReaderFactory.PEEK_ASYNC_SOURCE)
 abstract class AbstractReaderTest internal constructor(private val factory: ReaderFactory) {
     companion object {
         const val SEGMENT_SIZE = 16_709
+
+        const val UTF8 = "Սｍ, I'll 𝓽𝖾ll ᶌօ𝘂 ᴛℎ℮ 𝜚𝕣०ｂl𝖾ｍ ｗі𝕥𝒽 𝘵𝘩𝐞 𝓼𝙘𝐢𝔢𝓷𝗍𝜄𝚏𝑖ｃ 𝛠𝝾ｗ𝚎𝑟 𝕥ｈ⍺𝞃 𝛄𝓸𝘂'𝒓𝗲 υ𝖘𝓲𝗇ɡ 𝕙𝚎𝑟ｅ"
     }
 
     private lateinit var writer: Buffer
@@ -83,6 +85,12 @@ abstract class AbstractReaderTest internal constructor(private val factory: Read
         assertThat(reader.readHexadecimalUnsignedLong()).isEqualTo(0x7896543210abcdefL)
         writer.write("ABCDEF")
         assertThat(reader.readHexadecimalUnsignedLong()).isEqualTo(0xabcdefL)
+    }
+
+    @Test
+    fun readUtf8() {
+        writer.write(UTF8)
+        assertThat(reader.readString()).isEqualTo(UTF8)
     }
 
     @RepeatedTest(2)

@@ -432,17 +432,27 @@ public final class RealBuffer5 implements Buffer {
     public @NonNull Buffer write(final @NonNull String string) {
         Objects.requireNonNull(string);
 
-        final var bytes = string.getBytes(StandardCharsets.UTF_8);
-        final var length = bytes.length;
-        var pos = 0;
-        while (pos < length) {
+        return write(string.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private @NonNull Buffer write(byte[] bytes) {
+        return write(bytes, 0, bytes.length);
+    }
+
+    private @NonNull Buffer write(byte[] source, int offset, int byteCount) {
+        Objects.requireNonNull(source);
+        checkOffsetAndCount(source.length, offset, byteCount);
+
+        final var limit = offset + byteCount;
+        var _offset = offset;
+        while (_offset < limit) {
             final var tail = writableTail(1);
-            final var toCopy = Math.min(length - pos, Segment.SIZE - tail.limit);
-            System.arraycopy(bytes, pos, tail.data, tail.limit, toCopy);
-            pos += toCopy;
+            final var toCopy = Math.min(limit - _offset, Segment.SIZE - tail.limit);
+            System.arraycopy(source, _offset, tail.data, tail.limit, toCopy);
+            _offset += toCopy;
             tail.limit += toCopy;
         }
-        byteSize += length;
+        byteSize += byteCount;
         return this;
     }
 
