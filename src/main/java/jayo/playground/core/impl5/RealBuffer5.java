@@ -319,10 +319,10 @@ public final class RealBuffer5 implements Buffer {
         // decreasing its level.
         //
         // The tail segment cannot maintain the invariant because the application is producing bytes, which may require
-        // new nearly-empty tail segments to be appended.
+        // new nearly empty tail segments to be appended.
         //
         //
-        // Moving segments between buffers
+        // Moving segments between buffers.
         //
         // When writing one buffer to another, we prefer to reassign entire segments over copying bytes into their most
         // compact form. Suppose we have a buffer with these segment levels [91%, 61%]. If we append a buffer with a
@@ -336,12 +336,12 @@ public final class RealBuffer5 implements Buffer {
         // example, when we start with [100%, 40%] and append [30%, 80%], the result is [100%, 70%, 80%].
         //
         //
-        // Splitting segments
+        // Splitting segments.
         //
-        // Occasionally we write only part of a reader buffer to a writer buffer. For example, given a writer [51%, 91%], we
-        // may want to write the first 30% of a reader [92%, 82%] to it. To simplify, we first transform the reader to
-        // an equivalent buffer [30%, 62%, 82%] and then move the head segment, yielding writer [51%, 91%, 30%] and reader
-        // [62%, 82%].
+        // Occasionally we write only a part of a reader buffer to a writer buffer. For example, given a writer
+        // [51%, 91%], we may want to write the first 30% of a reader [92%, 82%] to it. To simplify, we first transform
+        // the reader to an equivalent buffer [30%, 62%, 82%] and then move the head segment.
+        // The final result is writer [51%, 91%, 30%] and reader [62%, 82%].
 
         if (Objects.requireNonNull(source) == this) {
             throw new IllegalArgumentException("reader == this, cannot write in itself");
@@ -399,6 +399,7 @@ public final class RealBuffer5 implements Buffer {
      */
     private static boolean mustPushNewTail(final @NonNull Segment currentTail, final @NonNull Segment newTail) {
         Objects.requireNonNull(newTail);
+
         if (!currentTail.owner) {
             return true; // Cannot compact: current tail isn't writable.
         }

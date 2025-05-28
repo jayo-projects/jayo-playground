@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class BufferReaderUtf8Benchmark {
-    @Param(/*"2", "3",*/ "4", "5")
+    @Param("2", "3", "4", "5")
     private var bufferVersion = 0
 
     @Param("20", "2000", "200000")
@@ -109,10 +109,10 @@ open class BufferReaderUtf8Benchmark {
         buffer.clear()
     }
 
-//    @Benchmark
-//    fun readUtf8StringJayo() {
-//        buffer.write(text)
-//        val read = buffer.readString()
-//        check(read.length == text.length)
-//    }
+    @Benchmark
+    fun readUtf8StringJayo() {
+        buffer.write(text)
+        val read = buffer.readString()
+        check(read.length == text.length)
+    }
 }

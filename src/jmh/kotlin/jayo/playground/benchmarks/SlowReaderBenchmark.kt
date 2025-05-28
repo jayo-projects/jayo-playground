@@ -20,7 +20,7 @@ import kotlin.random.Random
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class SlowReaderBenchmark {
-    @Param(/*"0", "1", */"2", "3")
+    @Param(/*"0", "1", */"2", "3", "4", "5")
     private var readerVersion = 0
 
     companion object {
@@ -80,6 +80,14 @@ open class SlowReaderBenchmark {
 
             3 -> {
                 jayoReader = Jayo.buffer3(Jayo.reader3(delayedReadableByteChannel))
+            }
+
+            4 -> {
+                jayoReader = Jayo.buffer4(Jayo.reader4(delayedInputStream))
+            }
+
+            5 -> {
+                jayoReader = Jayo.buffer5(Jayo.reader5(delayedInputStream))
             }
 
             else -> throw IllegalStateException("Unknown reader version: $jayoReader")
