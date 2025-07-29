@@ -167,19 +167,18 @@ public final class RealBuffer5 implements Buffer {
         if (byteCount == 0L) {
             return "";
         }
-        final var _byteCount = (int) byteCount;
 
         final var segment = head;
         assert segment != null;
         if (byteCount > segment.limit - segment.pos) {
             // If the string spans multiple segments, delegate to readByteArray().
-            return new String(readByteArray(_byteCount), charset);
+            return new String(readByteArray((int) byteCount), charset);
         }
 
         // else all bytes of this future String are in the head segment itself
-        final var result = new String(segment.data, segment.pos, _byteCount, charset);
-        segment.pos += _byteCount;
-        byteSize -= _byteCount;
+        final var result = new String(segment.data, segment.pos, (int) byteCount, charset);
+        segment.pos += (int) byteCount;
+        byteSize -= byteCount;
 
         if (segment.pos == segment.limit) {
             head = segment.pop();
@@ -276,22 +275,21 @@ public final class RealBuffer5 implements Buffer {
     void skipInternal(final long byteCount) {
         var remaining = byteCount;
         while (remaining > 0L) {
-            final var segment = head;
-            assert segment != null;
-            final var toSkip = (int) Math.min(remaining, segment.limit - segment.pos);
-            segment.pos += toSkip;
-
-            if (segment.pos == segment.limit) {
-                head = segment.pop();
-                SegmentPool.recycle(segment);
-            }
-
+            final var head = this.head;
+            assert head != null;
+            final var toSkip = (int) Math.min(remaining, head.limit - head.pos);
+            head.pos += toSkip;
             remaining -= toSkip;
             byteSize -= toSkip;
+
+            if (head.pos == head.limit) {
+                this.head = head.pop();
+                SegmentPool.recycle(head);
+            }
         }
 
         if (LOGGER.isLoggable(TRACE)) {
-            LOGGER.log(TRACE, "Buffer#{0} : Finished skipping {1} bytes from this {2}",
+            LOGGER.log(TRACE, "Buffer#{0} : Finished skipping {1} bytes from this{2}",
                     hashCode(), byteCount, System.lineSeparator());
         }
     }
@@ -344,14 +342,14 @@ public final class RealBuffer5 implements Buffer {
         // The final result is writer [51%, 91%, 30%] and reader [62%, 82%].
 
         if (Objects.requireNonNull(source) == this) {
-            throw new IllegalArgumentException("reader == this, cannot write in itself");
+            throw new IllegalArgumentException("source == this, cannot write in itself");
         }
         checkOffsetAndCount(source.bytesAvailable(), 0, byteCount);
         if (byteCount == 0L) {
             return;
         }
         if (LOGGER.isLoggable(TRACE)) {
-            LOGGER.log(TRACE, "Buffer#{0}: Start writing {1} bytes from reader buffer {2} into this buffer{3}",
+            LOGGER.log(TRACE, "Buffer#{0}: Start writing {1} bytes from source buffer {2} into this buffer{3}",
                     hashCode(), byteCount, source.hashCode(), System.lineSeparator());
         }
 
@@ -398,7 +396,8 @@ public final class RealBuffer5 implements Buffer {
      * that a segment can be recycled.
      */
     private static boolean mustPushNewTail(final @NonNull Segment currentTail, final @NonNull Segment newTail) {
-        Objects.requireNonNull(newTail);
+        assert currentTail != null;
+        assert newTail != null;
 
         if (!currentTail.owner) {
             return true; // Cannot compact: current tail isn't writable.

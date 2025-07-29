@@ -203,7 +203,6 @@ final class Segment {
         }
         prefix.limit = prefix.pos + byteCount;
         pos += byteCount;
-        //prefix.next = this;
 
         return prefix;
     }

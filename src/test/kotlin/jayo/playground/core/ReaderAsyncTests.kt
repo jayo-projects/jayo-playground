@@ -13,7 +13,7 @@ import org.junit.jupiter.api.RepeatedTest
 import java.io.InputStream
 import kotlin.random.Random
 
-// these tests are a good race-condition test, do them several times !
+// these tests are a good race-condition test, do them several times!
 class ReaderAsyncTests {
     companion object {
         private const val CHUNKS = 16

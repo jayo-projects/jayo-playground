@@ -1,7 +1,7 @@
 [versions]
 # plugins
 # https://github.com/JetBrains/kotlin/releases
-kotlin = "2.2.0-RC"
+kotlin = "2.2.0"
 # https://github.com/melix/jmh-gradle-plugin/releases (for benchmarks)
 jmhPlugin = "0.7.3"
 # https://github.com/GradleUp/shadow/releases (for benchmarks)
