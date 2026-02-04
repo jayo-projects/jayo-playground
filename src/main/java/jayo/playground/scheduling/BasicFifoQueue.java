@@ -5,7 +5,6 @@
 
 package jayo.playground.scheduling;
 
-import jayo.playground.scheduling.impl5.SinglyLinkedBasicFifoQueue;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 

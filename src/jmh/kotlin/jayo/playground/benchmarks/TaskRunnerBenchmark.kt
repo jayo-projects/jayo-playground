@@ -12,10 +12,10 @@ import java.util.concurrent.*
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class TaskRunnerBenchmark {
-    @Param("0", "1", "2", "3", "4", "5")
+    @Param(/*"0", "1", "2", "3", "4",*/ "5", "6")
     private var taskRunnerVersion = 0
 
-    @Param("virtual"/*, "pooled"*/)
+    @Param("virtual"/*, "platform"*/)
     private lateinit var executorType: String
 
     private lateinit var executor: ExecutorService
@@ -43,23 +43,21 @@ open class TaskRunnerBenchmark {
     fun setup() {
         executor = when (executorType) {
             "virtual" -> Executors.newVirtualThreadPerTaskExecutor()
-            "pooled" -> {
+            "platform" -> {
                 ThreadPoolExecutor(
                     // corePoolSize:
-                    4,
+                    25,
                     // maximumPoolSize:
-                    4,
+                    200,
                     // keepAliveTime:
                     60L,
                     TimeUnit.MINUTES,
-                    LinkedBlockingQueue(),
-                    Thread.ofVirtual().factory(),
+                    SynchronousQueue(),
                 ).apply { prestartAllCoreThreads() }
             }
 
             else -> throw IllegalStateException("Unknown executor type: $executorType")
         }
-        executor = Executors.newVirtualThreadPerTaskExecutor()
 
 
         taskRunner = when (taskRunnerVersion) {
@@ -69,6 +67,7 @@ open class TaskRunnerBenchmark {
             3 -> TaskRunner.create3(executor)
             4 -> TaskRunner.create4(executor)
             5 -> TaskRunner.create5(executor)
+            6 -> TaskRunner.create6(executor)
             else -> throw IllegalStateException("Unknown task runner version: $taskRunnerVersion")
         }
 

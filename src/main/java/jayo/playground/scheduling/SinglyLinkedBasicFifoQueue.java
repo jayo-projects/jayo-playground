@@ -3,9 +3,8 @@
  * Use of this source code is governed by the Apache 2.0 license.
  */
 
-package jayo.playground.scheduling.impl5;
+package jayo.playground.scheduling;
 
-import jayo.playground.scheduling.BasicFifoQueue;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
