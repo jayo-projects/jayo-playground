@@ -1,11 +1,11 @@
 [versions]
 # plugins
 # https://github.com/JetBrains/kotlin/releases
-kotlin = "2.2.0"
+kotlin = "2.3.0"
 # https://github.com/melix/jmh-gradle-plugin/releases (for benchmarks)
 jmhPlugin = "0.7.3"
 # https://github.com/GradleUp/shadow/releases (for benchmarks)
-shadow = "8.3.6"
+shadow = "9.3.1"
 
 # main
 # https://github.com/jspecify/jspecify/releases
@@ -13,13 +13,13 @@ jspecify = "1.0.0"
 
 # test
 # https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
-junit = "5.12.2"
+junit = "6.0.2"
 # https://mvnrepository.com/artifact/org.assertj/assertj-core
-assertj = "3.27.3"
+assertj = "3.27.7"
 # https://mvnrepository.com/artifact/org.slf4j/slf4j-jdk-platform-logging
 slf4j = "2.0.17"
 # https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
-logback = "1.5.18"
+logback = "1.5.27"
 
 # benchmarks
 # https://mvnrepository.com/artifact/org.openjdk.jmh/jmh-core

@@ -33,7 +33,7 @@ dependencies {
     testRuntimeOnly(libs.logback)
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(24)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 tasks.withType<Test> {
     useJUnitPlatform()
@@ -58,14 +58,14 @@ tasks {
     val shadowJmh by registering(ShadowJar::class) {
         dependsOn("jmhJar")
 
-        transform(DontIncludeResourceTransformer().apply {
+        transform<DontIncludeResourceTransformer> {
             resource = "META-INF/BenchmarkList"
-        })
+        }
 
-        transform(IncludeResourceTransformer().apply {
+        transform<IncludeResourceTransformer> {
             resource = "META-INF/BenchmarkList"
             file = file("${project.layout.buildDirectory.get()}/jmh-generated-resources/META-INF/BenchmarkList")
-        })
+        }
     }
 
     val assemble by getting {
@@ -76,6 +76,6 @@ tasks {
 // when version changes :
 // -> execute ./gradlew wrapper, then remove .gradle directory, then execute ./gradlew wrapper again
 tasks.wrapper {
-    gradleVersion = "8.14.1"
+    gradleVersion = "9.3.1"
     distributionType = Wrapper.DistributionType.ALL
 }
