@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Mode.Throughput)
 @Fork(value = 1)
 open class BufferReaderUtf8Benchmark {
-    @Param(/*"2", "3", "4",*/ "5")
+    @Param(/*"0", "2", "3", "4",*/ "5")
     private var bufferVersion = 0
 
     @Param("20", "2000", "200000")
@@ -83,6 +83,10 @@ open class BufferReaderUtf8Benchmark {
         text = builder.toString()
 
         when (bufferVersion) {
+            0 -> {
+                buffer = Buffer.create0()
+            }
+
             2 -> {
                 buffer = Buffer.create2()
             }

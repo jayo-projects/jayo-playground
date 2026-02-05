@@ -27,23 +27,26 @@ import jayo.playground.scheduling.TaskQueue;
 import jayo.playground.scheduling.TaskRunner;
 import org.jspecify.annotations.NonNull;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import java.util.concurrent.ExecutorService;
+import java.util.Set;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public final class TaskRunner6 implements TaskRunner {
-    private final @NonNull ExecutorService executor;
+    private final @NonNull Executor executor;
 
-    private final AtomicInteger nextQueueIndex = new AtomicInteger(10000);
+    private final @NonNull AtomicInteger nextQueueIndex = new AtomicInteger(10000);
 
     // scheduled runner
     private final @NonNull Runnable scheduledRunnable;
-    final Lock scheduledLock = new ReentrantLock();
-    final Condition scheduledCondition = scheduledLock.newCondition();
+    final @NonNull Lock scheduledLock = new ReentrantLock();
+    final @NonNull Condition scheduledCondition = scheduledLock.newCondition();
     private boolean scheduledCoordinatorWaiting = false;
     private long scheduledCoordinatorWakeUpAt = 0L;
     private int scheduledExecuteCallCount = 0;
@@ -51,9 +54,29 @@ public final class TaskRunner6 implements TaskRunner {
 
     // FIFO runner
     private final @NonNull Runnable runnable;
-    final Lock lock = new ReentrantLock();
+    final @NonNull Lock lock = new ReentrantLock();
     private int executeCallCount = 0;
     private int runCallCount = 0;
+
+    // termination
+    private final @NonNull Set<@NonNull Thread> threads = ConcurrentHashMap.newKeySet();
+    private final @NonNull CountDownLatch terminationSignal = new CountDownLatch(1);
+
+    // state lifecycle: RUNNING -> SHUTDOWN_STARTED -> SHUTDOWN
+    private static final int RUNNING = 0;
+    private static final int SHUTDOWN_STARTED = 1;
+    private static final int SHUTDOWN = 2;
+    private volatile int state;
+    private static final @NonNull VarHandle STATE;
+
+    static {
+        try {
+            final var l = MethodHandles.lookup();
+            STATE = l.findVarHandle(TaskRunner6.class, "state", int.class);
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
 
     /**
      * sequential tasks FIFO ordered.
@@ -64,7 +87,7 @@ public final class TaskRunner6 implements TaskRunner {
      */
     final Queue<Task6.ScheduledTask> futureScheduledTasks = new PriorityQueue<>();
 
-    public TaskRunner6(final @NonNull ExecutorService executor) {
+    public TaskRunner6(final @NonNull Executor executor) {
         assert executor != null;
 
         this.executor = executor;
@@ -82,9 +105,11 @@ public final class TaskRunner6 implements TaskRunner {
             }
 
             final var currentThread = Thread.currentThread();
+            threads.add(currentThread);
+
             final var oldName = currentThread.getName();
             try {
-                while (true) {
+                while (!Thread.interrupted()) {
                     assert task.name != null;
                     currentThread.setName(task.name);
                     final var delayNanos = task.runOnce();
@@ -111,6 +136,7 @@ public final class TaskRunner6 implements TaskRunner {
                 }
                 throw thrown;
             } finally {
+                executionComplete(currentThread);
                 currentThread.setName(oldName);
             }
         };
@@ -129,10 +155,12 @@ public final class TaskRunner6 implements TaskRunner {
             }
 
             final var currentThread = Thread.currentThread();
+            threads.add(currentThread);
+
             final var oldName = currentThread.getName();
             var threadNameChanged = false;
             try {
-                while (true) {
+                while (!Thread.interrupted()) {
                     if (task.name != null) {
                         currentThread.setName(task.name);
                         threadNameChanged = true;
@@ -159,13 +187,48 @@ public final class TaskRunner6 implements TaskRunner {
                 } finally {
                     lock.unlock();
                 }
-                throw thrown;
+                if (!(thrown instanceof InterruptedException)) {
+                    throw thrown;
+                }
             } finally {
+                executionComplete(currentThread);
                 if (threadNameChanged) {
                     currentThread.setName(oldName);
                 }
             }
         };
+    }
+
+    private boolean isShuttingDown() {
+        return state >= SHUTDOWN_STARTED;
+    }
+
+    void ensureRunning() {
+        if (isShuttingDown()) {
+            // shutdown or terminated
+            throw new RejectedExecutionException();
+        }
+    }
+
+    private void executionComplete(final @NonNull Thread thread) {
+        assert thread != null;
+
+        boolean removed = threads.remove(thread);
+        assert removed;
+        if (state == SHUTDOWN_STARTED) {
+            tryShutdown();
+        }
+    }
+
+    /**
+     * Try to terminate if already shutdown.
+     */
+    private void tryShutdown() {
+        if (threads.isEmpty()
+                && STATE.compareAndSet(this, SHUTDOWN_STARTED, SHUTDOWN)) {
+            // signaling termination is done
+            terminationSignal.countDown();
+        }
     }
 
     void kickScheduledCoordinator() {
@@ -387,6 +450,8 @@ public final class TaskRunner6 implements TaskRunner {
     @Override
     public void execute(final boolean cancellable, final Runnable block) {
         assert block != null;
+
+        ensureRunning();
         final var task = new Task6.RunnableTask(null, cancellable) {
             @Override
             public void run() {
@@ -407,14 +472,30 @@ public final class TaskRunner6 implements TaskRunner {
 
     @Override
     public void shutdown() {
+        if (isShuttingDown() ||
+                !STATE.compareAndSet(this, RUNNING, SHUTDOWN_STARTED)) {
+            return; // already shutting down or shutdown
+        }
+
+        tryShutdown();
+
         scheduledLock.lock();
         lock.lock();
         try {
             cancelAll();
-            executor.shutdown();
         } finally {
             lock.unlock();
             scheduledLock.unlock();
+        }
+
+        try {
+            if (!terminationSignal.await(1, TimeUnit.MILLISECONDS)) {
+                System.out.println("interrupting remaining active threads");
+                threads.forEach(Thread::interrupt);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e); // todo
         }
     }
 

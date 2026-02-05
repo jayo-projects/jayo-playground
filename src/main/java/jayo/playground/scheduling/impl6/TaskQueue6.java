@@ -91,6 +91,7 @@ sealed abstract class TaskQueue6<T extends Task6<T>> implements TaskQueue {
             assert name != null;
             assert initialDelayNanos >= 0;
             assert block != null;
+            taskRunner.ensureRunning();
 
             schedule(new Task6.@NonNull ScheduledTask(name, true) {
                 @Override
@@ -104,6 +105,7 @@ sealed abstract class TaskQueue6<T extends Task6<T>> implements TaskQueue {
         public void execute(final @NonNull String name, final boolean cancellable, final @NonNull Runnable block) {
             assert name != null;
             assert block != null;
+            taskRunner.ensureRunning();
 
             schedule(new Task6.@NonNull ScheduledTask(name, cancellable) {
                 @Override
@@ -129,6 +131,8 @@ sealed abstract class TaskQueue6<T extends Task6<T>> implements TaskQueue {
 
         @Override
         public @NonNull CountDownLatch idleLatch() {
+            taskRunner.ensureRunning();
+
             taskRunner.scheduledLock.lock();
             try {
                 // If the queue is already idle, that's easy.
@@ -272,6 +276,7 @@ sealed abstract class TaskQueue6<T extends Task6<T>> implements TaskQueue {
         public void execute(final @NonNull String name, final boolean cancellable, final @NonNull Runnable block) {
             assert name != null;
             assert block != null;
+            taskRunner.ensureRunning();
 
             schedule(new Task6.@NonNull RunnableTask(name, cancellable) {
                 @Override
@@ -294,6 +299,8 @@ sealed abstract class TaskQueue6<T extends Task6<T>> implements TaskQueue {
 
         @Override
         public @NonNull CountDownLatch idleLatch() {
+            taskRunner.ensureRunning();
+
             taskRunner.lock.lock();
             try {
                 // If the queue is already idle, that's easy.

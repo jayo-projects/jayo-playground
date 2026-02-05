@@ -25,10 +25,16 @@ open class TaskRunnerBenchmark {
 
     companion object {
         private const val OPERATIONS_PER_INVOCATION = 1200
-        private const val DELAY = 1000L
+        private const val DELAY = 10L // in milliseconds
 
         @JvmStatic
         private fun immediateRunnable(countDownLatch: CountDownLatch) {
+            countDownLatch.countDown()
+        }
+
+        @JvmStatic
+        private fun delayedRunnable(countDownLatch: CountDownLatch) {
+            Thread.sleep(DELAY)
             countDownLatch.countDown()
         }
 
@@ -77,6 +83,7 @@ open class TaskRunnerBenchmark {
     @TearDown(Level.Invocation)
     fun tearDown() {
         taskRunner.shutdown()
+        executor.shutdownNow()
     }
 
     @Benchmark
@@ -117,7 +124,36 @@ open class TaskRunnerBenchmark {
     }
 
     @Benchmark
-    fun taskRunner3QueueSchedule() {
+    fun taskRunner3QueueDelayedExecute() {
+        var index = OPERATIONS_PER_INVOCATION / 6
+        val taskQueue1 = taskRunner.newQueue()
+        val taskQueue2 = taskRunner.newQueue()
+        val taskQueue3 = taskRunner.newQueue()
+        val taskQueue4 = taskRunner.newQueue()
+        val taskQueue5 = taskRunner.newQueue()
+        val taskQueue6 = taskRunner.newQueue()
+
+        while (index >= 0) {
+            taskQueue1.execute("queue1-task${index}", false) { delayedRunnable(latch) }
+            taskQueue2.execute("queue2-task${index}", false) { delayedRunnable(latch) }
+            taskQueue3.execute("queue3-task${index}", false) { delayedRunnable(latch) }
+            taskQueue4.execute("queue4-task${index}", false) { delayedRunnable(latch) }
+            taskQueue5.execute("queue3-task${index}", false) { delayedRunnable(latch) }
+            taskQueue6.execute("queue4-task${index}", false) { delayedRunnable(latch) }
+            index--
+        }
+        latch.await(20, TimeUnit.SECONDS)
+
+        taskQueue1.shutdown()
+        taskQueue2.shutdown()
+        taskQueue3.shutdown()
+        taskQueue4.shutdown()
+        taskQueue5.shutdown()
+        taskQueue6.shutdown()
+    }
+
+    @Benchmark
+    fun taskRunner4QueueSchedule() {
         val taskQueue1 = taskRunner.newScheduledQueue()
         val taskQueue2 = taskRunner.newScheduledQueue()
         val taskQueue3 = taskRunner.newScheduledQueue()
@@ -142,7 +178,7 @@ open class TaskRunnerBenchmark {
     }
 
     @Benchmark
-    fun taskRunner4Mixed() {
+    fun taskRunner5Mixed() {
         val taskQueue1 = taskRunner.newQueue()
         val taskQueue2 = taskRunner.newQueue()
         val taskQueue3 = taskRunner.newScheduledQueue()

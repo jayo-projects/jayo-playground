@@ -29,7 +29,7 @@ open class SlowReaderBenchmark {
         private val STRING = "a".repeat(CHUNKS_BYTE_SIZE)
         private val ARRAY = ByteArray(CHUNKS_BYTE_SIZE) { 0x61 }
 
-        val TASK_RUNNER: TaskRunner = TaskRunner.create5(executorService())
+        val TASK_RUNNER: TaskRunner = TaskRunner.create6(executorService())
     }
 
     private lateinit var jayoReader: Reader
